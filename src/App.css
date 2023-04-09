@@ -1,0 +1,140 @@
+#root {
+  text-align: center;
+  flex-grow: 1;
+  height: 100vh;
+}
+
+.App {
+  height: inherit;
+  position: relative;
+}
+
+.map {
+  position: absolute;
+  inset: 0px;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+  min-height: 100vh;
+}
+
+.grid-map-overlay {
+  position: absolute;
+  inset: 0px;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto 1fr;
+  grid-template-areas: ". control-menu" ". menu";
+  pointer-events: none;
+}
+.grid-map-overlay button {
+  pointer-events: auto;
+}
+
+/* style a message bar on the bottom of the screen */
+.status-messenger {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background-color: transparent;
+  /* border-top: 1px solid #e5e5e5; */
+  padding: 0.5rem 1rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: #666;
+}
+form {
+  display: flex;
+}
+.input-wrapper {
+  margin: auto;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  background-color: black;
+  min-width: min(100%, 500px);
+  padding: 4px 8px;
+  border: 7px solid grey;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+.input-wrapper:focus-within {
+  border-color: white;
+}
+.input-status {
+  /* min-width: 100%; */
+  /* min(100%, 400px); */
+  height: 2rem;
+  border: none;
+  background-color: transparent;
+}
+
+.input-status:focus {
+  outline: none;
+}
+
+.btn-gang {
+  display: flex;
+  position: absolute;
+  z-index: 12345;
+  top: 10%;
+  left: 0;
+}
+.btn-findme, .btn-drawer {
+  background-color: #f5f5f5;
+  border: 1px solid #f5f5f5;
+  border-radius: 5px;
+  color: #000;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0.5rem;
+  padding: 0.5rem 1rem;
+  text-decoration: none;
+  transition: all 0.2s ease-in-out;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+/* 
+.read-the-docs {
+  color: #888;
+} */
