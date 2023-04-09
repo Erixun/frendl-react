@@ -150,6 +150,7 @@ const DrawerWelcome = ({
                       onClick={onClickToEnter}
                       colorScheme="teal"
                       rightIcon={<ArrowForwardIcon />}
+                      flexShrink={0}
                     >
                       ENTER
                     </Button>
@@ -158,8 +159,10 @@ const DrawerWelcome = ({
                 <p>OR</p>
                 <Button
                   isLoading={isAboutToCreate}
+                  loadingText={'Creating Zone...'}
                   onClick={onClickToCreate}
                   colorScheme="blue"
+                  width={'180px'}
                 >
                   {/* leftIcon={<AddIcon/>}> */}
                   Create your own
