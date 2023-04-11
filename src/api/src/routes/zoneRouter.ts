@@ -1,9 +1,10 @@
-import { NextFunction, Request, Response, Router } from 'express';
+import { Router } from 'express';
+import { isValidZoneId } from '../middleware/isValidZoneId';
 
-const router = Router();
+const zoneRouter = Router();
 
 //Create a new zone
-router.post('/zone', (req, res) => {
+zoneRouter.post('/', (req, res) => {
   //Generate a new zone id with 7 characters, digits and uppercase letters
   const zoneId = Math.random().toString(36).substring(2, 9).toUpperCase();
   const createdAt = new Date().toISOString();
@@ -21,20 +22,20 @@ router.post('/zone', (req, res) => {
 });
 
 //Retrieve zone by id
-router.get('/zone/:id', isValidZoneId, (req, res) => {
+zoneRouter.get('/:id', isValidZoneId, (req, res) => {
   //TODO: validate zone id
   const zoneId = req.params.id;
-  if (!validateZoneId(zoneId)) {
-    res.status(400).send('Invalid zone id');
-    return;
-  }
+  // if (!validateZoneId(zoneId)) {
+  //   res.status(400).send('Invalid zone id');
+  //   return;
+  // }
   //TODO: retrieve zone from database
 
   res.send(`Zone ID ${zoneId} is valid! But does it exist...?`);
 });
 
 //Invite user(s) to zone
-router.post('/zone/:id/invite', isValidZoneId, (req, res) => {
+zoneRouter.post('/:id/invite', isValidZoneId, (req, res) => {
   console.log('req.body', req.body);
   const invitees = req.body.invitees;
   const zoneId = req.params.id;
@@ -47,27 +48,10 @@ router.post('/zone/:id/invite', isValidZoneId, (req, res) => {
   res.send('Invitation sent!');
 });
 
-router.get('/zone/:id/member', isValidZoneId, (req, res) => {
+zoneRouter.get('/:id/member', isValidZoneId, (req, res) => {
   const zoneId = req.params.id;
   //TODO: retrieve members from database
   res.send(`Members of zone ${zoneId}: ...`);
 });
 
-export default router;
-
-//TODO: use middleware to validate zone id?
-export function isValidZoneId(req: Request, res: Response, next: NextFunction) {
-  const zoneId = req.params.id;
-  if (!validateZoneId(zoneId)) {
-    res.status(400).send('Invalid zone ID');
-    return;
-  }
-  next();
-}
-
-//function to validate zone id with 7 characters including digits and uppercase letters
-const zoneIdRegex = /^[A-Z0-9]{7}$/;
-
-export const validateZoneId = (zoneId: string) => {
-  return zoneIdRegex.test(zoneId);
-};
+export default zoneRouter;

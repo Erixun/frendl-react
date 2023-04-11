@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import zone from './zone';
+import zoneRouter from './zoneRouter';
 
 const router = Router();
 
-router.use('/api', zone);
+router.use('/zone', zoneRouter);
 
 export default router;

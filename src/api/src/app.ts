@@ -5,7 +5,7 @@ import routes from './routes';
 
 const app = express();
 app.use(json());
-app.use('/', routes);
+app.use('/api', routes);
 
 // app.get('/', (req, res) => {
 //   res.send('Hello Frendl!');
