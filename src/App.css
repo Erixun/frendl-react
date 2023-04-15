@@ -31,24 +31,18 @@
   min-height: 100vh;
   display: grid;
   grid-template-columns: 1fr auto;
-  grid-template-rows: auto 1fr;
-  grid-template-areas: ". control-menu" ". menu";
+  grid-template-rows: auto 1fr 1fr;
+  grid-template-areas: '. control-menu' '. menu' 'messenger messenger';
   pointer-events: none;
 }
-.grid-map-overlay button {
+.grid-map-overlay input, .grid-map-overlay button {
   pointer-events: auto;
 }
 
 /* style a message bar on the bottom of the screen */
 .status-messenger {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
   background-color: transparent;
-  /* border-top: 1px solid #e5e5e5; */
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.6rem;
   text-align: center;
   font-size: 0.8rem;
   color: #666;
@@ -60,20 +54,22 @@ form {
   margin: auto;
   display: grid;
   grid-template-columns: 1fr auto;
-  background-color: black;
+  background-color: white;
   min-width: min(100%, 500px);
-  padding: 4px 8px;
-  border: 7px solid grey;
+  padding-left: 8px;
+  border: 8px solid var(--chakra-colors-teal-500);
   border-radius: 8px;
   box-sizing: border-box;
 }
 .input-wrapper:focus-within {
-  border-color: white;
+  border-color: black;
+}
+
+.input-wrapper button {
+  border-radius: 0;
+  border:1px solid;
 }
 .input-status {
-  /* min-width: 100%; */
-  /* min(100%, 400px); */
-  height: 2rem;
   border: none;
   background-color: transparent;
 }
@@ -89,7 +85,8 @@ form {
   top: 10%;
   left: 0;
 }
-.btn-findme, .btn-drawer {
+.btn-findme,
+.btn-drawer {
   background-color: #f5f5f5;
   border: 1px solid #f5f5f5;
   border-radius: 5px;
@@ -103,38 +100,7 @@ form {
   transition: all 0.2s ease-in-out;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
 
 .card {
   padding: 2em;
 }
-/* 
-.read-the-docs {
-  color: #888;
-} */
