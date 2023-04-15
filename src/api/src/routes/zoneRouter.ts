@@ -6,7 +6,11 @@ const zoneRouter = Router();
 //Create a new zone
 zoneRouter.post('/', (req, res) => {
   //Generate a new zone id with 7 characters, digits and uppercase letters
-  const zoneId = Math.random().toString(36).substring(2, 9).toUpperCase();
+  const zoneId = generateZoneId(); //Math.random().toString(36).substring(2, 9).toUpperCase();
+
+  //TODO: check if zone id already exists in database
+  //if it does, generate a new one
+
   const createdAt = new Date().toISOString();
   const updatedAt = createdAt;
   const createdBy = 'user1';
@@ -23,12 +27,7 @@ zoneRouter.post('/', (req, res) => {
 
 //Retrieve zone by id
 zoneRouter.get('/:id', isValidZoneId, (req, res) => {
-  //TODO: validate zone id
   const zoneId = req.params.id;
-  // if (!validateZoneId(zoneId)) {
-  //   res.status(400).send('Invalid zone id');
-  //   return;
-  // }
   //TODO: retrieve zone from database
 
   res.send(`Zone ID ${zoneId} is valid! But does it exist...?`);
@@ -48,10 +47,34 @@ zoneRouter.post('/:id/invite', isValidZoneId, (req, res) => {
   res.send('Invitation sent!');
 });
 
-zoneRouter.get('/:id/member', isValidZoneId, (req, res) => {
+zoneRouter.get('/:id/members', isValidZoneId, (req, res) => {
   const zoneId = req.params.id;
   //TODO: retrieve members from database
   res.send(`Members of zone ${zoneId}: ...`);
 });
+
+//Request to enter zone
+zoneRouter.post('/:id/enter', isValidZoneId, (req, res) => {
+  const zoneId = req.params.id;
+
+  //if is member, enter zone
+  //if not member, send request to zone owner
+
+  res.send({ message: `Request to enter zone ${zoneId} sent!` });
+});
+
+//Request to exit zone
+zoneRouter.post('/:id/exit', isValidZoneId, (req, res) => {
+  const zoneId = req.params.id;
+
+  //if is member, exit zone
+  //if not member, send bad request
+
+  res.send({ message: `Request to exit zone ${zoneId} sent!` });
+});
+
+export function generateZoneId() {
+  return Math.random().toString(36).substring(2, 9).toUpperCase();
+}
 
 export default zoneRouter;
