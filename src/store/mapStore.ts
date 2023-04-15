@@ -1,5 +1,5 @@
 import { Loader } from '@googlemaps/js-api-loader';
-import { makeAutoObservable } from 'mobx';
+import { makeAutoObservable, runInAction } from 'mobx';
 
 export class MapStore {
   map: google.maps.Map | undefined;
@@ -8,23 +8,25 @@ export class MapStore {
   infoWindow: google.maps.InfoWindow | null = null;
   hasInfoWindowOpen = false;
   isMyLocationLoading = false;
-  myStatus = '';
+  myStatus = ''; //TODO: remove/move this?
 
   constructor() {
     makeAutoObservable(this);
-
     this.startMap();
   }
 
   displayStatus(status: string) {
-    if (!status) return console.error('No status provided');
+    if (!status) {
+      this.myStatus = '';
+      this.infoWindow?.close();
+      return console.error('No status provided');
+    }
     this.myStatus = `<p>${status}</p>`;
     console.log('this.infoWindow', this.infoWindow);
     this.infoWindow?.close();
     this.infoWindow = null;
     this.infoWindow = new google.maps.InfoWindow({
       content: status,
-      // minWidth: 200,
     });
     this.infoWindow?.open(this.map, this.myLocationMarker);
   }
@@ -34,23 +36,30 @@ export class MapStore {
       this.showMyLocation(this.myLocation);
       return;
     }
-    console.log('findMyLocation()');
+
     this.isMyLocationLoading = true;
     if (navigator.geolocation) {
-      return navigator.geolocation.getCurrentPosition((position) => {
-        console.log('position', position);
-        const myLocation = new google.maps.LatLng(
-          position.coords.latitude,
-          position.coords.longitude
-        );
-        this.myLocation = myLocation;
-        this.showMyLocation(myLocation);
-      });
+      return navigator.geolocation.getCurrentPosition(
+        (position) => {
+          console.log('position', position);
+          const myLocation = new google.maps.LatLng(
+            position.coords.latitude,
+            position.coords.longitude
+          );
+          this.myLocation = myLocation;
+          this.showMyLocation(myLocation);
+        },
+        (error) => {
+          console.error(error.message);
+          runInAction(() => {
+            this.isMyLocationLoading = false;
+          });
+        }
+      );
     }
 
+    this.isMyLocationLoading = false;
     console.error('Geolocation is not supported by this browser.');
-
-    // this.showMyLocation();
   }
 
   showMyLocation(location: google.maps.LatLng | null = null) {
@@ -67,8 +76,7 @@ export class MapStore {
 
     const contentString = `
       <div class="info-window">
-        <h1>My Location</h1>
-        <p>My location is here</p>
+        <p>Here I am!</p>
       </div>
       `;
 
@@ -77,11 +85,13 @@ export class MapStore {
 
     this.infoWindow = new google.maps.InfoWindow({
       content: contentString,
-      minWidth: 200,
     });
 
-    this.infoWindow?.close();
-    // this.infoWindow?.open(this.map, this.myLocationMarker);
+    setTimeout(() => {
+      this.infoWindow?.close();
+    }, 3000);
+
+    this.infoWindow?.open(this.map, this.myLocationMarker);
     this.myLocationMarker.addListener('click', () => {
       if (this.hasInfoWindowOpen) {
         this.infoWindow?.close();
@@ -92,8 +102,8 @@ export class MapStore {
       this.infoWindow?.open(this.map, this.myLocationMarker);
       this.hasInfoWindowOpen = true;
     });
+
     this.isMyLocationLoading = false;
-    // }
   }
 
   async startMap() {
@@ -113,14 +123,8 @@ async function initGoogleMap() {
     const map = new google.maps.Map(
       document.getElementById('map') as HTMLElement,
       {
-        // center: { lat: -34.397, lng: 150.644 },
-        //center on Stockholm
         center: { lat: 59.3293, lng: 18.0686 },
         zoom: 7,
-        // streetViewControl: false,
-        // mapTypeControl: false,
-        // fullscreenControl: false,
-        // zoomControl: false,
         disableDefaultUI: true,
         styles: [
           {
