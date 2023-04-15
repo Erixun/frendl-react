@@ -1,13 +1,10 @@
-//import Drawer from Chakra
-import { ArrowForwardIcon, SunIcon, AddIcon } from '@chakra-ui/icons';
+import { ArrowForwardIcon } from '@chakra-ui/icons';
 import {
   Drawer,
   DrawerBody,
-  DrawerCloseButton,
   DrawerContent,
   DrawerHeader,
   DrawerOverlay,
-  SlideFade,
 } from '@chakra-ui/react';
 
 import {
@@ -20,8 +17,6 @@ import {
   Container,
   Alert,
   AlertIcon,
-  AlertTitle,
-  AlertDescription,
 } from '@chakra-ui/react';
 import { useState } from 'react';
 
@@ -35,26 +30,26 @@ const DrawerWelcome = ({
   const [zoneCode, setZoneCode] = useState('');
   const [isAboutToEnter, setIsAboutToEnter] = useState(false);
   const [errorEnterZone, setErrorEnterZone] = useState('');
+  const [successEnterZone, setSuccessEnterZone] = useState('');
   const [isAboutToCreate, setIsAboutToCreate] = useState(false);
   const [errorCreateZone, setErrorCreateZone] = useState('');
+  const [successCreateZone, setSuccessCreateZone] = useState('');
   const onClickToEnter = () => {
     console.log('onClickToEnter');
     setIsAboutToEnter(true);
-    fetch('http://localhost:3000/api/zone/enter', {
+    fetch(`http://localhost:3000/api/zone/${zoneCode}/enter`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        zoneCode: zoneCode,
-      }),
     })
       .then((response) => {
-        console.log(response);
         return response.json();
       })
       .then((data) => {
         console.log(data);
+        setSuccessEnterZone(`Request approved! Entering Zone...`);
+        setTimeout(() => {
+          onClose();
+          setSuccessEnterZone('');
+        }, 2000);
       })
       .catch((error) => {
         setErrorEnterZone('Could not enter that Zone');
@@ -69,23 +64,20 @@ const DrawerWelcome = ({
   };
 
   const onClickToCreate = () => {
-    console.log('onClickToCreate');
     setIsAboutToCreate(true);
-    fetch('http://localhost:3000/api/zone/create', {
+    fetch('http://localhost:3000/api/zone', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        zoneCode: zoneCode,
-      }),
     })
       .then((response) => {
-        console.log(response);
         return response.json();
       })
       .then((data) => {
         console.log(data);
+        setSuccessCreateZone('Zone created! Entering now...');
+        setTimeout(() => {
+          onClose();
+          setSuccessCreateZone('');
+        }, 2000);
       })
       .catch((error) => {
         setErrorCreateZone('Unable to create Zone');
@@ -100,12 +92,14 @@ const DrawerWelcome = ({
   };
 
   const handleZoneCode = (e: any) => {
-    console.log(e.target.value);
     setZoneCode(e.target.value.toUpperCase());
   };
 
+  /**
+   * Validate zone code as consisting of 7 alphanumeric characters
+   */
   const isValidZoneCode = () => {
-    return zoneCode.length === 7;
+    return /^[A-Z0-9]{7}$/.test(zoneCode);
   };
 
   return (
@@ -122,16 +116,24 @@ const DrawerWelcome = ({
             <DrawerHeader fontSize={30}>Welcome to Frendl</DrawerHeader>
             <DrawerBody position={'relative'} display={'flex'}>
               <VStack gap={5} position={'relative'} margin={'auto'}>
-                <div style={{ position: 'absolute', top: '-30%', left: 0, right: 0 }}>
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '-40%',
+                    left: 0,
+                    right: 0,
+                  }}
+                >
                   {errorEnterZone && (
                     <Alert status="error">
                       <AlertIcon />
-                      {/* <AlertTitle>
-                  </AlertTitle> */}
                       {errorEnterZone}
-                      {/* <AlertDescription>
-                    Your Chakra experience may be degraded.
-                  </AlertDescription> */}
+                    </Alert>
+                  )}
+                  {successEnterZone && (
+                    <Alert status="success">
+                      <AlertIcon />
+                      {successEnterZone}
                     </Alert>
                   )}
                 </div>
@@ -164,13 +166,18 @@ const DrawerWelcome = ({
                   colorScheme="blue"
                   width={'180px'}
                 >
-                  {/* leftIcon={<AddIcon/>}> */}
                   Create your own
                 </Button>
                 {errorCreateZone && (
                   <Alert status="error" position={'absolute'} top={'105%'}>
                     <AlertIcon />
                     {errorCreateZone}
+                  </Alert>
+                )}
+                {successCreateZone && (
+                  <Alert status="success" position={'absolute'} top={'105%'}>
+                    <AlertIcon />
+                    {successCreateZone}
                   </Alert>
                 )}
               </VStack>
@@ -181,5 +188,7 @@ const DrawerWelcome = ({
     </Drawer>
   );
 };
+
+//TODO: Custom alert component
 
 export default DrawerWelcome;
