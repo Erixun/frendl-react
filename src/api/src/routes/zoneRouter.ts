@@ -29,6 +29,12 @@ zoneRouter.post('/', (req, res) => {
 zoneRouter.get('/:id', isValidZoneId, (req, res) => {
   const zoneId = req.params.id;
   //TODO: retrieve zone from database
+  //The zone should contain the following properties:
+  //zoneId, createdAt, updatedAt, createdBy, members, invitees
+  //as well as positions of all members, status of all members, chat history, etc.
+  //(online, offline, in zone, not in zone, etc.)
+  //
+  //if zone does not exist, send 404
 
   res.send(`Zone ID ${zoneId} is valid! But does it exist...?`);
 });
