@@ -7,7 +7,9 @@ import { BsJournalText } from 'react-icons/bs';
 import { IconButton, SlideFade, VStack, useDisclosure } from '@chakra-ui/react';
 import { observer } from 'mobx-react-lite';
 import { MapStore } from '../store/mapStore';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import Pusher from 'pusher-js';
+import { toast } from 'react-toastify';
 
 const GridMapOverlay = observer(
   ({
@@ -41,6 +43,100 @@ const GridMapOverlay = observer(
       //TODO: add to status log
       setStatus('');
     };
+
+    Pusher.logToConsole = true;
+    const pusher = new Pusher('1810da9709de2631e7bc', {
+      authEndpoint: 'http://localhost:3000/api/pusher/auth',
+      cluster: 'eu',
+    });
+
+    const [zoneState, setZoneState] = useState({
+      users_online: {},
+      center: {},
+      //make the locations object indexable by string
+      locations: {} as { [key: string]: Object },
+      current_user: '',
+    });
+
+    useEffect(() => {
+      console.log('useEffect mapStore.zoneId', mapStore.zoneId);
+
+      mapStore.zoneChannel = pusher.subscribe(
+        `zone-channel-${mapStore.zoneId}`
+      );
+
+      mapStore.zoneChannel.bind(
+        'pusher:subscription_succeeded',
+        (members: any) => {
+          let location = {};
+          if (mapStore.myLocation) {
+            const { lat, lng } = mapStore.myLocation as google.maps.LatLng;
+            location = { lat: lat(), lng: lng() };
+          } else {
+            location = { lat: 0, lng: 0 };
+          }
+          const newState = {
+            ...zoneState,
+            users_online: members.members,
+            current_user: members.myID || 'unknown',
+            center: location,
+          };
+          newState.locations[`${members.myID}`] = location;
+          setZoneState(newState);
+
+          console.log(zoneState);
+          notify(zoneState);
+        }
+      );
+
+      mapStore.zoneChannel.bind('location-update', (body: any) => {
+   
+        const newState = {
+          ...zoneState,
+          locations: {
+            ...zoneState.locations,
+            [`${body.username}`]: body.location,
+          },
+        };
+        setZoneState(newState);
+      });
+
+      // mapStore.zoneChannel.bind('pusher:member_removed', (member) => {
+      //   this.setState((prevState, props) => {
+      //     const newState = { ...prevState };
+      //     // remove member location once they go offline
+      //     delete newState.locations[`${member.id}`];
+      //     // delete member from the list of online users
+      //     delete newState.users_online[`${member.id}`];
+      //     return newState;
+      //   });
+      //   notify(state);
+      // });
+
+      // mapStore.zoneChannel.bind('pusher:member_added', (member) => {
+      //   notify(state);
+      // });
+    }, [mapStore.zoneId]);
+
+    useEffect(() => {
+      console.log('myLocation changed');
+      fetch('http://localhost:3000/api/update-location', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              zoneId: mapStore.zoneId,
+              username: zoneState.current_user || 'unknown',
+              location: mapStore.getLocation(),
+            }),
+          }).then((res) => {
+            if (res.status === 200) {
+              console.log('new location updated successfully');
+            }
+          });
+    }, [mapStore.myLocation]);
+
 
     return (
       <div className="grid-map-overlay">
@@ -106,7 +202,11 @@ const GridMapOverlay = observer(
             />
           </VStack>
         </SlideFade>
-        <SlideFade in={canSubmitStatus} offsetY="40px" style={{ gridArea: 'messenger' }}>
+        <SlideFade
+          in={canSubmitStatus}
+          offsetY="40px"
+          style={{ gridArea: 'messenger' }}
+        >
           {/* TODO: Create component */}
           <div className="status-messenger">
             <form onSubmit={submitStatus}>
@@ -118,7 +218,9 @@ const GridMapOverlay = observer(
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
                 />
-                <Button type={"submit"} colorScheme='blue' size={"sm"}>Submit</Button>
+                <Button type={'submit'} colorScheme="blue" size={'sm'}>
+                  Submit
+                </Button>
               </div>
             </form>
           </div>
@@ -127,4 +229,18 @@ const GridMapOverlay = observer(
     );
   }
 );
+
+export const notify = (state: any) => {
+  // Object.keys(state.users_online).length;
+  toast(`Users online : ${1}`, {
+    position: 'top-right',
+    autoClose: 3000,
+    hideProgressBar: false,
+    closeOnClick: true,
+    pauseOnHover: true,
+    draggable: true,
+    type: 'info',
+  });
+};
+
 export default GridMapOverlay;
