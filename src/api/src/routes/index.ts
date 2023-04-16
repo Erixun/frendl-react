@@ -7,6 +7,7 @@ const router = Router();
 router.use('/zone', zoneRouter);
 
 router.post('/pusher/auth', (req, res) => {
+  console.log('pusher/auth', req.body);
   let socketId = req.body.socket_id;
   let channel = req.body.channel_name;
   let random_string = Math.random()
@@ -24,12 +25,22 @@ router.post('/pusher/auth', (req, res) => {
 });
 
 router.post('/update-location', (req, res) => {
+  const { zoneId, username, location } = req.body;
+  console.log('/update-location', req.body);
   // trigger a new post event via pusher
-  pusher.trigger('presence-channel', 'location-update', {
-    username: req.body.username,
-    location: req.body.location,
-  });
-  res.json({ status: 200 });
+  pusher
+    .trigger(`zone-channel-${zoneId}`, 'location-update', {
+      username: username,
+      location: location,
+    })
+    .then(() => {
+      console.log('pusher.trigger success');
+      res.json({ status: 200 });
+    })
+    .catch((err) => {
+      console.log('pusher.trigger error', err);
+      res.json({ status: 500 });
+    });
 });
 
 export default router;
