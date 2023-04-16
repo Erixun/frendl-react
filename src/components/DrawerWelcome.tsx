@@ -19,13 +19,17 @@ import {
   AlertIcon,
 } from '@chakra-ui/react';
 import { useState } from 'react';
+import { MapStore } from '../store/mapStore';
+import { runInAction } from 'mobx';
 
 const DrawerWelcome = ({
+  mapStore,
   isOpen,
   onClose,
 }: {
   isOpen: boolean;
   onClose: () => void;
+  mapStore: MapStore;
 }) => {
   const [zoneCode, setZoneCode] = useState('');
   const [isAboutToEnter, setIsAboutToEnter] = useState(false);
@@ -45,6 +49,9 @@ const DrawerWelcome = ({
       })
       .then((data) => {
         console.log(data);
+        runInAction(() => {
+          mapStore.zoneId = data.zoneId;
+        });
         setSuccessEnterZone(`Request approved! Entering Zone...`);
         setTimeout(() => {
           onClose();
@@ -73,6 +80,9 @@ const DrawerWelcome = ({
       })
       .then((data) => {
         console.log(data);
+        runInAction(() => {
+          mapStore.zoneId = data.zoneId;
+        });
         setSuccessCreateZone('Zone created! Entering now...');
         setTimeout(() => {
           onClose();
