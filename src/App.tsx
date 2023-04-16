@@ -13,7 +13,7 @@ const App = observer(() => {
 
 return (
     <div className="App">
-      <DrawerWelcome isOpen={isOpen} onClose={onClose} />
+      <DrawerWelcome mapStore={mapStore} isOpen={isOpen} onClose={onClose} />
       {/* TODO: Create ViewZone component? */}
       <div id="map" className="map"></div>
       <GridMapOverlay mapStore={mapStore} onOpenDrawer={onOpen} />
