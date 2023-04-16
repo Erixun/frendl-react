@@ -1,5 +1,6 @@
 import { Loader } from '@googlemaps/js-api-loader';
 import { makeAutoObservable, runInAction } from 'mobx';
+import { Channel } from 'pusher-js';
 
 export class MapStore {
   map: google.maps.Map | undefined;
@@ -9,11 +10,21 @@ export class MapStore {
   hasInfoWindowOpen = false;
   isMyLocationLoading = false;
   myStatus = ''; //TODO: remove/move this?
+  zoneId: string | undefined;
+  zoneChannel: Channel | undefined;
 
   constructor() {
     makeAutoObservable(this);
     this.startMap();
   }
+
+  //get my location as simple object
+  getLocation = () => {
+    return {
+      lat: this.myLocation?.lat(),
+      lng: this.myLocation?.lng(),
+    };
+  };
 
   displayStatus(status: string) {
     if (!status) {
@@ -39,15 +50,19 @@ export class MapStore {
 
     this.isMyLocationLoading = true;
     if (navigator.geolocation) {
-      return navigator.geolocation.getCurrentPosition(
+      return navigator.geolocation.watchPosition(
+        //) getCurrentPosition(
         (position) => {
           console.log('position', position);
-          const myLocation = new google.maps.LatLng(
-            position.coords.latitude,
-            position.coords.longitude
-          );
+          const location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+          const myLocation = new google.maps.LatLng(location.lat, location.lng);
           this.myLocation = myLocation;
           this.showMyLocation(myLocation);
+
+          //TODO: trigger pusher event to update location
         },
         (error) => {
           console.error(error.message);
