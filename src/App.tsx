@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { MapStore } from './store/mapStore';
 import { observer } from 'mobx-react-lite';
 import DrawerWelcome from './components/DrawerWelcome';
