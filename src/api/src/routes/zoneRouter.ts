@@ -13,7 +13,38 @@ zoneRouter.post('/', (req, res) => {
 
   const createdAt = new Date().toISOString();
   const updatedAt = createdAt;
-  const createdBy = 'user1';
+  const createdBy = 'Erixun';
+
+  //generate array of member objects with online status, location, etc.
+  const members = [
+    {
+      username: createdBy,
+      status: 'online',
+      location: {
+        lat: 0,
+        lng: 0,
+      },
+    },
+    {
+      username: 'Melvin',
+      status: 'offline',
+      //set location to some coordinates in Solna, Sweden
+      location: {
+        lat: 59.36,
+        lng: 18.0,
+      },
+    },
+    {
+      username: 'Malva',
+      status: 'offline',
+      //set location to some other coordinates in Solna, Sweden
+      location: {
+        lat: 59.37,
+        lng: 18.1,
+      },
+    },
+  ];
+
   //TODO: create a new zone in the database
   const responseObject = {
     message: 'Zone created successfully',
@@ -21,6 +52,7 @@ zoneRouter.post('/', (req, res) => {
     createdAt,
     updatedAt,
     createdBy,
+    members,
   };
   res.send(responseObject);
 });
