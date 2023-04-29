@@ -25,22 +25,26 @@ router.post('/pusher/auth', (req, res) => {
 });
 
 router.post('/update-location', (req, res) => {
+  return res.json({
+    status: 200,
+    message: 'Not triggering pusher event right now...',
+  });
   const { zoneId, username, location } = req.body;
   console.log('/update-location', req.body);
   // trigger a new post event via pusher
-  pusher
-    .trigger(`zone-channel-${zoneId}`, 'location-update', {
-      username: username,
-      location: location,
-    })
-    .then(() => {
-      console.log('pusher.trigger success');
-      res.json({ status: 200 });
-    })
-    .catch((err) => {
-      console.log('pusher.trigger error', err);
-      res.json({ status: 500 });
-    });
+  // pusher
+  //   .trigger(`zone-channel-${zoneId}`, 'location-update', {
+  //     username: username,
+  //     location: location,
+  //   })
+  //   .then(() => {
+  //     console.log('pusher.trigger success');
+  //     res.json({ status: 200 });
+  //   })
+  //   .catch((err) => {
+  //     console.log('pusher.trigger error', err);
+  //     res.json({ status: 500 });
+  //   });
 });
 
 export default router;
