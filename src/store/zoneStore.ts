@@ -1,30 +1,57 @@
-//create mobx store to store zone data
-
 import { makeAutoObservable } from 'mobx';
 
-export class ZoneStore {
-  zone: Zone | undefined;
-  zoneId: string | undefined;
-  zoneName: string | undefined;
-  zoneDescription: string | undefined;
-  zoneMembers: string[] | undefined;
-  zoneOwner: string | undefined;
-  zoneCreatedAt: Date | undefined;
-  zoneUpdatedAt: Date | undefined;
-  zoneCreatedBy: string | undefined;
+const ZoneMenuOption = {
+  MEMBERS: 'members',
+  LOGS: 'logs',
+  STATUS: 'status',
+  CHAT: 'chat',
+  LOCATE: 'locate',
+  LEAVE: 'leave',
+};
 
-  constructor() {
+type ZoneMenuOption = keyof typeof ZoneMenuOption;
+
+export class ZoneStore implements Zone {
+  zoneId: string;
+  zoneName?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  createdBy: string;
+  members: Member[] = [];
+
+  toggledMenuOption: ZoneMenuOption | undefined;
+
+  constructor(zone: Zone) {
     makeAutoObservable(this);
+
+    this.zoneId = zone.zoneId;
+    this.zoneName = zone.zoneName;
+    this.createdAt = zone.createdAt;
+    this.updatedAt = zone.updatedAt;
+    this.createdBy = zone.createdBy;
+    this.members = zone.members;
   }
 }
 
-export type Zone = {
+export const createZone = (zone: Zone) => new ZoneStore(zone);
+
+export interface Zone {
+  message?: string;
   zoneId: string;
-  zoneName: string;
-  zoneDescription: string;
-  zoneMembers: string[];
-  zoneOwner: string;
-  zoneCreatedAt: Date;
-  zoneUpdatedAt: Date;
-  zoneCreatedBy: string;
-};
+  zoneName?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  createdBy: string;
+  members: Member[];
+}
+
+export interface Member {
+  username: string;
+  status: string;
+  location: Location;
+}
+
+export interface Location {
+  lat: number;
+  lng: number;
+}
