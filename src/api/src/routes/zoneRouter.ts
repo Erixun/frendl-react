@@ -14,32 +14,35 @@ zoneRouter.post('/', (req, res) => {
   const createdAt = new Date().toISOString();
   const updatedAt = createdAt;
   const createdBy = 'Erixun';
+  console.log('req.body', req.body);
+
+  console.log('user location: ', req.body.location ?? 'undefined');
 
   //generate array of member objects with online status, location, etc.
   const members = [
     {
       username: createdBy,
       status: 'online',
-      location: {
+      location: req.body.location ?? {
         lat: 0,
         lng: 0,
       },
     },
     {
-      username: 'Melvin',
+      username: 'Melvin Moore',
       status: 'offline',
       //set location to some coordinates in Solna, Sweden
       location: {
         lat: 59.36,
-        lng: 18.0,
+        lng: 18.05,
       },
     },
     {
-      username: 'Malva',
+      username: 'Malva Melin',
       status: 'offline',
       //set location to some other coordinates in Solna, Sweden
       location: {
-        lat: 59.37,
+        lat: 59.365,
         lng: 18.1,
       },
     },
