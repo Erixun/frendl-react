@@ -1,6 +1,20 @@
 import { ChatIcon, CloseIcon, HamburgerIcon } from '@chakra-ui/icons';
-import { Button, Icon } from '@chakra-ui/react';
-import { IoPeople } from 'react-icons/io5';
+import {
+  Button,
+  Drawer,
+  DrawerBody,
+  DrawerCloseButton,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerOverlay,
+  Icon,
+  List,
+  ListIcon,
+  ListItem,
+  ModalOverlay,
+} from '@chakra-ui/react';
+import { IoPeople, IoPersonCircle } from 'react-icons/io5';
 import { AiOutlineNotification } from 'react-icons/ai';
 import { BiLogOutCircle, BiTargetLock } from 'react-icons/bi';
 import { BsJournalText } from 'react-icons/bs';
@@ -9,7 +23,9 @@ import { observer } from 'mobx-react-lite';
 import { MapStore } from '../store/mapStore';
 import { useEffect, useState } from 'react';
 import Pusher from 'pusher-js';
-import { toast } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import "./GridMapOverlay.css"
 
 const GridMapOverlay = observer(
   ({
@@ -23,11 +39,11 @@ const GridMapOverlay = observer(
 
     const findMe = () => {
       mapStore.findMyLocation();
-      console.log(mapStore.isMyLocationLoading);
     };
 
     const exitZone = () => {
       onOpenDrawer();
+      closeZoneDrawer();
       console.log('exitZone');
       //TODO: clear zone data etc
     };
@@ -44,11 +60,12 @@ const GridMapOverlay = observer(
       setStatus('');
     };
 
-    Pusher.logToConsole = true;
-    const pusher = new Pusher('1810da9709de2631e7bc', {
-      authEndpoint: 'http://localhost:3000/api/pusher/auth',
-      cluster: 'eu',
-    });
+    // Pusher.logToConsole = true;
+    //TODO: move to env
+    // const pusher = new Pusher('1810da9709de2631e7bc', {
+    //   authEndpoint: 'http://localhost:3000/api/pusher/auth',
+    //   cluster: 'eu',
+    // });
 
     const [zoneState, setZoneState] = useState({
       users_online: {},
@@ -56,50 +73,79 @@ const GridMapOverlay = observer(
       //make the locations object indexable by string
       locations: {} as { [key: string]: Object },
       current_user: '',
+      members: [
+        {
+          username: 'Erixun',
+          status: 'online',
+          location: {
+            lat: 0,
+            lng: 0,
+          },
+        },
+        {
+          username: 'Melvin',
+          status: 'offline',
+          location: {
+            lat: 0,
+            lng: 0,
+          },
+        },
+        {
+          username: 'Malva',
+          status: 'offline',
+          location: {
+            lat: 0,
+            lng: 0,
+          },
+        },
+      ],
     });
 
     useEffect(() => {
       console.log('useEffect mapStore.zoneId', mapStore.zoneId);
-
-      mapStore.zoneChannel = pusher.subscribe(
-        `zone-channel-${mapStore.zoneId}`
+      console.log(
+        'Pusher subscription & channel binds commented out to prevent reaching quota'
       );
+      console.log('TODO: Initialize new ZoneStore');
+      // mapStore.zoneChannel = pusher.subscribe(
+      //   `zone-channel-${mapStore.zoneId}`
+      // );
 
-      mapStore.zoneChannel.bind(
-        'pusher:subscription_succeeded',
-        (members: any) => {
-          let location = {};
-          if (mapStore.myLocation) {
-            const { lat, lng } = mapStore.myLocation as google.maps.LatLng;
-            location = { lat: lat(), lng: lng() };
-          } else {
-            location = { lat: 0, lng: 0 };
-          }
-          const newState = {
-            ...zoneState,
-            users_online: members.members,
-            current_user: members.myID || 'unknown',
-            center: location,
-          };
-          newState.locations[`${members.myID}`] = location;
-          setZoneState(newState);
+      // mapStore.zoneChannel.bind(
+      //   'pusher:subscription_succeeded',
+      //   (members: any) => {
+      //     let location = {};
+      //     if (mapStore.myLocation) {
+      //       const { lat, lng } = mapStore.myLocation as google.maps.LatLng;
+      //       location = { lat: lat(), lng: lng() };
+      //     } else {
+      //       location = { lat: 0, lng: 0 };
+      //     }
+      //     const newState = {
+      //       ...zoneState,
+      //       users_online: members.members,
+      //       current_user: members.myID || 'unknown',
+      //       center: location,
+      //     };
+      //     newState.locations[`${members.myID}`] = location;
+      //     setZoneState(newState);
 
-          console.log(zoneState);
-          notify(zoneState);
-        }
-      );
+      //     console.log(zoneState);
+      //     notify(zoneState);
+      //   }
+      // );
 
-      mapStore.zoneChannel.bind('location-update', (body: any) => {
-   
-        const newState = {
-          ...zoneState,
-          locations: {
-            ...zoneState.locations,
-            [`${body.username}`]: body.location,
-          },
-        };
-        setZoneState(newState);
-      });
+      // mapStore.zoneChannel.bind('location-update', (body: any) => {
+
+      //   const newState = {
+      //     ...zoneState,
+      //     locations: {
+      //       ...zoneState.locations,
+      //       [`${body.username}`]: body.location,
+      //     },
+      //   };
+      //   setZoneState(newState);
+      // });
 
       // mapStore.zoneChannel.bind('pusher:member_removed', (member) => {
       //   this.setState((prevState, props) => {
@@ -121,25 +167,35 @@ const GridMapOverlay = observer(
     useEffect(() => {
       console.log('myLocation changed');
       fetch('http://localhost:3000/api/update-location', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              zoneId: mapStore.zoneId,
-              username: zoneState.current_user || 'unknown',
-              location: mapStore.getLocation(),
-            }),
-          }).then((res) => {
-            if (res.status === 200) {
-              console.log('new location updated successfully');
-            }
-          });
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          zoneId: mapStore.zoneId,
+          username: zoneState.current_user || 'unknown',
+          location: mapStore.getLocation(),
+        }),
+      }).then((res) => {
+        if (res.status === 200) {
+          console.log('new location updated successfully');
+        }
+      });
     }, [mapStore.myLocation]);
 
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+    const toggleZoneDrawer = () => {
+      setIsDrawerOpen(!isDrawerOpen);
+    };
+
+    const closeZoneDrawer = () => {
+      setIsDrawerOpen(false);
+    };
 
     return (
       <div className="grid-map-overlay">
+        <ToastContainer />
         <IconButton
           onClick={onToggle}
           colorScheme={!isOpen ? 'teal' : 'gray'}
@@ -156,6 +212,8 @@ const GridMapOverlay = observer(
             <IconButton
               colorScheme="teal"
               aria-label="Toggle Members"
+              isActive={isDrawerOpen}
+              onClick={() => toggleZoneDrawer()}
               size="lg"
               marginTop={'10px'}
               icon={<Icon as={IoPeople} boxSize={7} />}
@@ -163,6 +221,7 @@ const GridMapOverlay = observer(
             <IconButton
               colorScheme="teal"
               aria-label="Toggle Status Log"
+              onClick={notify}
               size="lg"
               marginTop={'10px'}
               icon={<Icon as={BsJournalText} boxSize={6} />}
@@ -225,21 +284,61 @@ const GridMapOverlay = observer(
             </form>
           </div>
         </SlideFade>
+
+        <Drawer
+          isOpen={isDrawerOpen}
+          placement="left"
+          onClose={closeZoneDrawer}
+          isFullHeight={false}
+          size={isLandscape() ? 'xs' : 'sm'}
+          closeOnOverlayClick={false}
+        >
+          <DrawerContent>
+            <DrawerCloseButton />
+            <DrawerHeader>Zone Members</DrawerHeader>
+
+            <DrawerBody>
+              {/* TODO: list members of Zone */}
+              <List spacing={3} paddingLeft={'20px'} fontSize={'1.2rem'}>
+                {zoneState.members.map((member, i) => (
+                  <ListItem key={i} onClick={findMe}>
+                    {/* TODO: on click member name focus & pan to member location */}
+                    <ListIcon
+                      as={IoPersonCircle}
+                      color={member.status === 'online' ? 'green.500' : 'grey'}
+                    />
+                    {member.username}
+                  </ListItem>
+                ))}
+              </List>
+            </DrawerBody>
+
+            <DrawerFooter>
+              <Button variant="outline" mr={3} onClick={closeZoneDrawer}>
+                Close
+              </Button>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
       </div>
     );
   }
 );
 
-export const notify = (state: any) => {
-  // Object.keys(state.users_online).length;
-  toast(`Users online : ${1}`, {
-    position: 'top-right',
-    autoClose: 3000,
+function isLandscape() {
+  const doc = document.documentElement;
+  return doc.scrollWidth > doc.scrollHeight;
+}
+
+export const notify = () => {
+  return toast(`User Malva entered the zone`, {
+    position: 'bottom-right',
+    autoClose: 2000,
     hideProgressBar: false,
     closeOnClick: true,
     pauseOnHover: true,
     draggable: true,
-    type: 'info',
+    type: 'success',
   });
 };
 
