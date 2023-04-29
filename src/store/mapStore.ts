@@ -1,6 +1,7 @@
 import { Loader } from '@googlemaps/js-api-loader';
 import { makeAutoObservable, runInAction } from 'mobx';
 import { Channel } from 'pusher-js';
+import { ZoneStore } from './zoneStore';
 
 export class MapStore {
   map: google.maps.Map | undefined;
@@ -10,6 +11,7 @@ export class MapStore {
   hasInfoWindowOpen = false;
   isMyLocationLoading = false;
   myStatus = ''; //TODO: remove/move this?
+  zone: ZoneStore | undefined;
   zoneId: string | undefined;
   zoneChannel: Channel | undefined;
   watchId: number | undefined;
@@ -18,6 +20,12 @@ export class MapStore {
   constructor() {
     makeAutoObservable(this);
     this.startMap();
+  }
+  get userLocationCoordinates() {
+    return {
+      lat: this.myLocation?.lat(),
+      lng: this.myLocation?.lng(),
+    };
   }
 
   //for each marker, add a google maps info window with the title of the marker
