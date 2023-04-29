@@ -38,11 +38,20 @@ const DrawerWelcome = ({
   const [isAboutToCreate, setIsAboutToCreate] = useState(false);
   const [errorCreateZone, setErrorCreateZone] = useState('');
   const [successCreateZone, setSuccessCreateZone] = useState('');
+
   const onClickToEnter = () => {
     console.log('onClickToEnter');
     setIsAboutToEnter(true);
     fetch(`http://localhost:3000/api/zone/${zoneCode}/enter`, {
+      //TODO: make DRY
       method: 'POST',
+      //TODO: Include user's location in request
+      body: JSON.stringify({
+        location: mapStore.myLocation,
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
     })
       .then((response) => {
         return response.json();
@@ -71,9 +80,17 @@ const DrawerWelcome = ({
   };
 
   const onClickToCreate = () => {
+    console.log(mapStore.myLocation)
     setIsAboutToCreate(true);
     fetch('http://localhost:3000/api/zone', {
       method: 'POST',
+      //TODO: Add user's location to zone creation
+      body: JSON.stringify({
+        location: mapStore.myLocation,
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
     })
       .then((response) => {
         return response.json();
@@ -82,6 +99,18 @@ const DrawerWelcome = ({
         console.log(data);
         runInAction(() => {
           mapStore.zoneId = data.zoneId;
+          const members = data.members;
+          //create a google maps marker for each member location
+          members.forEach((member: any) => {
+            const marker = new google.maps.Marker({
+              position: member.location,
+              map: mapStore.map,
+              title: member.username,
+            });
+            mapStore.markers.push(marker);
+          });
+          mapStore.addInfoWindowToMarkers();
+
         });
         setSuccessCreateZone('Zone created! Entering now...');
         setTimeout(() => {
