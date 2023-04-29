@@ -21,6 +21,7 @@ import {
 import { useState } from 'react';
 import { MapStore } from '../store/mapStore';
 import { runInAction } from 'mobx';
+import { ZoneStore, createZone } from '../store/zoneStore';
 
 const DrawerWelcome = ({
   mapStore,
@@ -47,7 +48,7 @@ const DrawerWelcome = ({
       method: 'POST',
       //TODO: Include user's location in request
       body: JSON.stringify({
-        location: mapStore.myLocation,
+        location: mapStore.userLocationCoordinates,
       }),
       headers: {
         'Content-Type': 'application/json',
@@ -59,6 +60,7 @@ const DrawerWelcome = ({
       .then((data) => {
         console.log(data);
         runInAction(() => {
+          mapStore.zone = createZone(data);
           mapStore.zoneId = data.zoneId;
         });
         setSuccessEnterZone(`Request approved! Entering Zone...`);
@@ -98,6 +100,7 @@ const DrawerWelcome = ({
       .then((data) => {
         console.log(data);
         runInAction(() => {
+          mapStore.zone = createZone(data);
           mapStore.zoneId = data.zoneId;
           const members = data.members;
           //create a google maps marker for each member location
