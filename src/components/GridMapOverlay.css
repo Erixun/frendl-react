@@ -1,0 +1,7 @@
+.chakra-modal__content-container.css-17pwl6t {
+  pointer-events: none;
+}
+
+.chakra-modal__content-container.css-17pwl6t * {
+  pointer-events: auto;
+}
