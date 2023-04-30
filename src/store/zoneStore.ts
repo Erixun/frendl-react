@@ -80,6 +80,7 @@ export interface Zone {
 export interface ZoneMember {
   username: string;
   status: string;
+  statusMessage: string;
   location: ZoneLocation;
 }
 
