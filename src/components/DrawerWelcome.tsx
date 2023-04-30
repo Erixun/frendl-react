@@ -21,16 +21,17 @@ import {
 import { useState } from 'react';
 import { MapStore } from '../store/mapStore';
 import { runInAction } from 'mobx';
-import { ZoneStore, createZone } from '../store/zoneStore';
+import { ZoneLocation, createZone } from '../store/zoneStore';
+import { members as fakeMembers } from '../testData';
 
 const DrawerWelcome = ({
-  mapStore,
+  map,
   isOpen,
   onClose,
 }: {
   isOpen: boolean;
   onClose: () => void;
-  mapStore: MapStore;
+  map: MapStore;
 }) => {
   const [zoneCode, setZoneCode] = useState('');
   const [isAboutToEnter, setIsAboutToEnter] = useState(false);
@@ -43,25 +44,18 @@ const DrawerWelcome = ({
   const onClickToEnter = () => {
     console.log('onClickToEnter');
     setIsAboutToEnter(true);
-    fetch(`http://localhost:3000/api/zone/${zoneCode}/enter`, {
-      //TODO: make DRY
-      method: 'POST',
-      //TODO: Include user's location in request
-      body: JSON.stringify({
-        location: mapStore.userLocationCoordinates,
-      }),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
+    fetch(
+      `http://localhost:3000/api/zone/${zoneCode}/enter`,
+      provideZoneFetchOptions(map.userLocation)
+    )
       .then((response) => {
         return response.json();
       })
       .then((data) => {
         console.log(data);
         runInAction(() => {
-          mapStore.zone = createZone(data);
-          mapStore.zoneId = data.zoneId;
+          map.zone = createZone(map, data);
+          map.zoneId = data.zoneId;
         });
         setSuccessEnterZone(`Request approved! Entering Zone...`);
         setTimeout(() => {
@@ -82,38 +76,30 @@ const DrawerWelcome = ({
   };
 
   const onClickToCreate = () => {
-    console.log(mapStore.myLocation)
     setIsAboutToCreate(true);
-    fetch('http://localhost:3000/api/zone', {
-      method: 'POST',
-      //TODO: Add user's location to zone creation
-      body: JSON.stringify({
-        location: mapStore.myLocation,
-      }),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
+    fetch(
+      'http://localhost:3000/api/zone',
+      provideZoneFetchOptions(map.userLocation)
+    )
       .then((response) => {
         return response.json();
       })
       .then((data) => {
         console.log(data);
         runInAction(() => {
-          mapStore.zone = createZone(data);
-          mapStore.zoneId = data.zoneId;
-          const members = data.members;
+          map.zone = createZone(map, data);
+          map.zoneId = data.zoneId;
+          const members = data.members || fakeMembers;
           //create a google maps marker for each member location
           members.forEach((member: any) => {
             const marker = new google.maps.Marker({
               position: member.location,
-              map: mapStore.map,
+              map: map.map,
               title: member.username,
             });
-            mapStore.markers.push(marker);
+            map.markers.push(marker);
           });
-          mapStore.addInfoWindowToMarkers();
-
+          map.addInfoWindowToMarkers();
         });
         setSuccessCreateZone('Zone created! Entering now...');
         setTimeout(() => {
@@ -231,6 +217,16 @@ const DrawerWelcome = ({
   );
 };
 
-//TODO: Custom alert component
+const provideZoneFetchOptions = (location?: ZoneLocation) => {
+  return {
+    method: 'POST',
+    body: JSON.stringify({
+      location,
+    }),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  };
+};
 
 export default DrawerWelcome;
