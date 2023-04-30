@@ -5,3 +5,45 @@
 .chakra-modal__content-container.css-17pwl6t * {
   pointer-events: auto;
 }
+
+.status-messenger {
+  pointer-events: inherit;
+}
+
+.zone-drawer-content {
+  height: max-content;
+}
+
+ul {
+  padding: 0;
+  margin: 0;
+}
+
+.zone-member {
+  cursor: pointer;
+  padding: 0 10px;
+  border-radius: 5px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.zone-member:hover {
+  background-color: #e2e8f0;
+}
+.person-circle, .target-lock {
+  margin-bottom: -2px;
+}
+
+.target-lock {
+  opacity: 0;
+}
+
+.target-lock.active {
+  opacity: 1;
+  color: black;
+}
+
+.zone-member:hover .target-lock {
+  opacity: 1;
+}
