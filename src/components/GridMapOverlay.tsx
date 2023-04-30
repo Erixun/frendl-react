@@ -1,5 +1,6 @@
 import { ChatIcon, CloseIcon, HamburgerIcon } from '@chakra-ui/icons';
 import {
+  Box,
   Button,
   Drawer,
   DrawerBody,
@@ -7,16 +8,15 @@ import {
   DrawerContent,
   DrawerFooter,
   DrawerHeader,
-  DrawerOverlay,
   Icon,
   List,
   ListIcon,
   ListItem,
-  ModalOverlay,
 } from '@chakra-ui/react';
 import { IoPeople, IoPersonCircle } from 'react-icons/io5';
 import { AiOutlineNotification } from 'react-icons/ai';
 import { BiLogOutCircle, BiTargetLock } from 'react-icons/bi';
+import { TfiTarget } from 'react-icons/tfi';
 import { BsJournalText } from 'react-icons/bs';
 import { IconButton, SlideFade, VStack, useDisclosure } from '@chakra-ui/react';
 import { observer } from 'mobx-react-lite';
@@ -25,27 +25,28 @@ import { useEffect, useState } from 'react';
 import Pusher from 'pusher-js';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import "./GridMapOverlay.css"
+import './GridMapOverlay.css';
+import { ZoneMember } from '../store/zoneStore';
+import { members } from '../testData';
 
 const GridMapOverlay = observer(
   ({
-    mapStore,
+    map,
     onOpenDrawer,
   }: {
-    mapStore: MapStore;
+    map: MapStore;
     onOpenDrawer: () => void;
   }) => {
     const { isOpen, onToggle } = useDisclosure({ defaultIsOpen: true });
 
     const findMe = () => {
-      mapStore.findMyLocation();
+      map.findMyLocation();
     };
 
     const exitZone = () => {
       onOpenDrawer();
       closeZoneDrawer();
-      console.log('exitZone');
-      //TODO: clear zone data etc
+      map.clearZone();
     };
 
     const [canSubmitStatus, setCanSubmitStatus] = useState(false);
@@ -55,7 +56,7 @@ const GridMapOverlay = observer(
       e.preventDefault();
       console.log('submitStatus');
       console.log(status);
-      mapStore.displayStatus(status);
+      map.displayStatus(status);
       //TODO: add to status log
       setStatus('');
     };
@@ -73,50 +74,28 @@ const GridMapOverlay = observer(
       //make the locations object indexable by string
       locations: {} as { [key: string]: Object },
       current_user: '',
-      members: [
-        {
-          username: 'Erixun',
-          status: 'online',
-          location: {
-            lat: 0,
-            lng: 0,
-          },
-        },
-        {
-          username: 'Melvin',
-          status: 'offline',
-          location: {
-            lat: 0,
-            lng: 0,
-          },
-        },
-        {
-          username: 'Malva',
-          status: 'offline',
-          location: {
-            lat: 0,
-            lng: 0,
-          },
-        },
-      ],
+      members: map.zone?.members || [],
     });
 
     useEffect(() => {
-      console.log('useEffect mapStore.zoneId', mapStore.zoneId);
+      console.log('useEffect map.zoneId', map.zoneId);
       console.log(
         'Pusher subscription & channel binds commented out to prevent reaching quota'
       );
-      console.log('TODO: Initialize new ZoneStore');
-      // mapStore.zoneChannel = pusher.subscribe(
-      //   `zone-channel-${mapStore.zoneId}`
+
+      //set map zoom level and center so that all markers are visible
+      map.displayMemberLocations();
+
+      // map.zoneChannel = pusher.subscribe(
+      //   `zone-channel-${map.zoneId}`
       // );
 
-      // mapStore.zoneChannel.bind(
+      // map.zoneChannel.bind(
       //   'pusher:subscription_succeeded',
       //   (members: any) => {
       //     let location = {};
-      //     if (mapStore.myLocation) {
-      //       const { lat, lng } = mapStore.myLocation as google.maps.LatLng;
+      //     if (map.myLocation) {
+      //       const { lat, lng } = map.myLocation as google.maps.LatLng;
       //       location = { lat: lat(), lng: lng() };
       //     } else {
       //       location = { lat: 0, lng: 0 };
@@ -135,7 +114,7 @@ const GridMapOverlay = observer(
       //   }
       // );
 
-      // mapStore.zoneChannel.bind('location-update', (body: any) => {
+      // map.zoneChannel.bind('location-update', (body: any) => {
 
       //   const newState = {
       //     ...zoneState,
@@ -147,7 +126,7 @@ const GridMapOverlay = observer(
       //   setZoneState(newState);
       // });
 
-      // mapStore.zoneChannel.bind('pusher:member_removed', (member) => {
+      // map.zoneChannel.bind('pusher:member_removed', (member) => {
       //   this.setState((prevState, props) => {
       //     const newState = { ...prevState };
       //     // remove member location once they go offline
@@ -159,10 +138,10 @@ const GridMapOverlay = observer(
       //   notify(state);
       // });
 
-      // mapStore.zoneChannel.bind('pusher:member_added', (member) => {
+      // map.zoneChannel.bind('pusher:member_added', (member) => {
       //   notify(state);
       // });
-    }, [mapStore.zoneId]);
+    }, [map.zoneId]);
 
     useEffect(() => {
       console.log('myLocation changed');
@@ -172,16 +151,16 @@ const GridMapOverlay = observer(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          zoneId: mapStore.zoneId,
+          zoneId: map.zoneId,
           username: zoneState.current_user || 'unknown',
-          location: mapStore.getLocation(),
+          location: map.userLocation,
         }),
       }).then((res) => {
         if (res.status === 200) {
           console.log('new location updated successfully');
         }
       });
-    }, [mapStore.myLocation]);
+    }, [map.myLocation]);
 
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -191,6 +170,30 @@ const GridMapOverlay = observer(
 
     const closeZoneDrawer = () => {
       setIsDrawerOpen(false);
+    };
+
+    const showLocation = (member: ZoneMember) => {
+      return () => {
+        map.zone?.showLocation(member);
+      };
+    };
+
+    const [target, setTarget] = useState('');
+
+    const lockTarget = (member: ZoneMember) => {
+      return () => {
+        const { username } = member;
+        const isCurrentTarget = target === username;
+        const newTarget = isCurrentTarget ? '' : username;
+        setTarget(newTarget);
+        if (isCurrentTarget) return map.zone?.setFocus(null);
+
+        map.zone?.setFocus(member);
+      };
+    };
+
+    const getMembers = () => {
+      return map.zone?.members || members;
     };
 
     return (
@@ -244,7 +247,7 @@ const GridMapOverlay = observer(
             />
             <IconButton
               onClick={findMe}
-              isLoading={mapStore.isMyLocationLoading}
+              isLoading={map.isMyLocationLoading}
               colorScheme="teal"
               aria-label="Find my location"
               size="lg"
@@ -263,8 +266,12 @@ const GridMapOverlay = observer(
         </SlideFade>
         <SlideFade
           in={canSubmitStatus}
+          unmountOnExit={true}
           offsetY="40px"
-          style={{ gridArea: 'messenger' }}
+          style={{
+            gridArea: 'messenger',
+            pointerEvents: canSubmitStatus ? 'auto' : 'none',
+          }}
         >
           {/* TODO: Create component */}
           <div className="status-messenger">
@@ -293,21 +300,44 @@ const GridMapOverlay = observer(
           size={isLandscape() ? 'xs' : 'sm'}
           closeOnOverlayClick={false}
         >
-          <DrawerContent>
+          <DrawerContent className="zone-drawer-content">
             <DrawerCloseButton />
             <DrawerHeader>Zone Members</DrawerHeader>
 
             <DrawerBody>
-              {/* TODO: list members of Zone */}
-              <List spacing={3} paddingLeft={'20px'} fontSize={'1.2rem'}>
-                {zoneState.members.map((member, i) => (
-                  <ListItem key={i} onClick={findMe}>
-                    {/* TODO: on click member name focus & pan to member location */}
+              <List spacing={3} paddingLeft={'0'} fontSize={'1.2rem'}>
+                {getMembers().map((member, i) => (
+                  <ListItem
+                    className="zone-member"
+                    key={i}
+                    onClick={showLocation(member)}
+                  >
+                    <IconButton
+                      sx={{
+                        '&:hover': { color: 'red' },
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        outline: 'none',
+                        boxShadow: 'none',
+                        padding: '0',
+                      }}
+                      aria-label="Target"
+                      onClick={lockTarget(member)}
+                      icon={
+                        target === member.username ? (
+                          <BiTargetLock size={20} />
+                        ) : (
+                          <TfiTarget />
+                        )
+                      }
+                    />
+
                     <ListIcon
+                      className="person-circle"
                       as={IoPersonCircle}
                       color={member.status === 'online' ? 'green.500' : 'grey'}
                     />
-                    {member.username}
+                    <span className="name">{member.username}</span>
                   </ListItem>
                 ))}
               </List>
