@@ -58,20 +58,9 @@ button:focus-visible {
 
 .gm-style-iw {
   padding: 12px !important;
-  /* color: #ffffff;
-  background-color: #242424; */
   color: black;
 }
 
-/* @media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-} */
+.gm-style-iw .gm-ui-hover-effect {
+  display: none !important;
+}
