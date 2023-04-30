@@ -1,7 +1,7 @@
 import { Loader } from '@googlemaps/js-api-loader';
 import { makeAutoObservable, runInAction } from 'mobx';
 import { Channel } from 'pusher-js';
-import { ZoneStore } from './zoneStore';
+import { ZoneMember, ZoneStore } from './zoneStore';
 
 export class MapStore {
   map: google.maps.Map | undefined;
@@ -10,6 +10,7 @@ export class MapStore {
   infoWindow: google.maps.InfoWindow | null = null;
   hasInfoWindowOpen = false;
   isMyLocationLoading = false;
+  currentUser: ZoneMember;
   myStatus = ''; //TODO: remove/move this?
   zone: ZoneStore | undefined;
   zoneId: string | undefined;
@@ -17,13 +18,14 @@ export class MapStore {
   watchId: number | undefined;
   markers: google.maps.Marker[] = [];
 
-  constructor() {
+  constructor(currentUser: ZoneMember) {
+    this.currentUser = currentUser;
     makeAutoObservable(this);
     this.startMap();
   }
 
   get userLocation() {
-    if (!this.myLocation) return undefined;
+    if (!this.myLocation) return this.currentUser.location; // undefined;
 
     return {
       lat: this.myLocation.lat(),
@@ -46,9 +48,13 @@ export class MapStore {
 
   clearZone() {
     runInAction(() => {
+      if (!this.zone) return;
+      this.zone.clear();
       this.zone = undefined;
       this.zoneId = undefined;
       this.zoneChannel = undefined;
+      this.markers.forEach((marker) => marker.setMap(null));
+      this.markers = [];
     });
   }
 
@@ -92,16 +98,35 @@ export class MapStore {
   displayStatus(status: string) {
     if (!status) {
       this.myStatus = '';
-      this.infoWindow?.close();
-      return console.error('No status provided');
+      // this.infoWindow?.close();
+      console.error('No status provided');
     }
     this.myStatus = `<p>${status}</p>`;
-    this.infoWindow?.close();
-    this.infoWindow = null;
-    this.infoWindow = new google.maps.InfoWindow({
-      content: status,
-    });
-    this.infoWindow?.open(this.map, this.myLocationMarker);
+    const my = this.zone?.members.find(
+      (member) => member.username === this.currentUser.username
+    );
+    if (!my) return console.error('No member found for current user');
+    // my.marker?.setMap(null);
+    // my.infoWindow?.close();
+    // my.infoWindow = undefined;
+    console.log(my);
+    console.log(my.infoWindow);
+
+    const content = `<b>${my.username}</b><br>${status}`;
+    my.infoWindow?.setContent(content);
+
+    // if (!marker) return console.error('No marker found for current user');
+
+    // if (!myMarker) return console.error('No marker found for current user');
+    // console.log(myMarker);
+    // myMarker.setTitle(status);
+
+    // this.infoWindow?.close();
+    // this.infoWindow = null;
+    // this.infoWindow = new google.maps.InfoWindow({
+    //   content: status,
+    // });
+    // this.infoWindow?.open(this.map, this.myLocationMarker);
   }
 
   findMyLocation() {
@@ -146,7 +171,7 @@ export class MapStore {
     }
 
     cancelLoading(this);
-    console.error('Geolocation is not supported by this browser.');
+    // console.error('Geolocation is not supported by this browser.');
 
     function cancelLoading(store: MapStore) {
       runInAction(() => {
@@ -165,11 +190,11 @@ export class MapStore {
 
     this.map.setZoom(16);
     this.map.panTo(location);
-    this.myLocationMarker = new google.maps.Marker({
-      position: location,
-      map: this.map,
-      title: 'You are here',
-    });
+    // this.myLocationMarker = new google.maps.Marker({
+    //   position: location,
+    //   map: this.map,
+    //   title: 'You are here',
+    // });
 
     runInAction(() => {
       this.isMyLocationLoading = false;
