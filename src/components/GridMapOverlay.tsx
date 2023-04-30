@@ -30,13 +30,7 @@ import { ZoneMember } from '../store/zoneStore';
 import { members } from '../testData';
 
 const GridMapOverlay = observer(
-  ({
-    map,
-    onOpenDrawer,
-  }: {
-    map: MapStore;
-    onOpenDrawer: () => void;
-  }) => {
+  ({ map, onOpenDrawer }: { map: MapStore; onOpenDrawer: () => void }) => {
     const { isOpen, onToggle } = useDisclosure({ defaultIsOpen: true });
 
     const findMe = () => {
@@ -59,6 +53,7 @@ const GridMapOverlay = observer(
       map.displayStatus(status);
       //TODO: add to status log
       setStatus('');
+      setCanSubmitStatus(false);
     };
 
     // Pusher.logToConsole = true;
@@ -270,7 +265,7 @@ const GridMapOverlay = observer(
           offsetY="40px"
           style={{
             gridArea: 'messenger',
-            pointerEvents: canSubmitStatus ? 'auto' : 'none',
+            pointerEvents: 'none'
           }}
         >
           {/* TODO: Create component */}
@@ -278,6 +273,7 @@ const GridMapOverlay = observer(
             <form onSubmit={submitStatus}>
               <div className="input-wrapper">
                 <input
+                  autoFocus
                   className="input-status"
                   type="text"
                   placeholder="Enter your status"
