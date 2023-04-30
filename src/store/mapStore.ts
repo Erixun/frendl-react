@@ -21,15 +21,42 @@ export class MapStore {
     makeAutoObservable(this);
     this.startMap();
   }
-  get userLocationCoordinates() {
+
+  get userLocation() {
+    if (!this.myLocation) return undefined;
+
     return {
-      lat: this.myLocation?.lat(),
-      lng: this.myLocation?.lng(),
+      lat: this.myLocation.lat(),
+      lng: this.myLocation.lng(),
     };
   }
 
-  //for each marker, add a google maps info window with the title of the marker
-  addInfoWindowToMarkers() {
+  displayMemberLocations() {
+    if (!this.map || !this.zone) return;
+    const bounds = new google.maps.LatLngBounds();
+    this.zone.members.forEach((member) => {
+      if (!member.location)
+        return console.log('Location undefined for', member.username);
+      const location = new google.maps.LatLng(member.location);
+      bounds.extend(location);
+    });
+    this.map.fitBounds(bounds);
+    this.map.panTo(bounds.getCenter());
+  }
+
+  clearZone() {
+    runInAction(() => {
+      this.zone = undefined;
+      this.zoneId = undefined;
+      this.zoneChannel = undefined;
+    });
+  }
+
+  panTo(location: google.maps.LatLng) {
+    this.map?.panTo(location);
+  }
+
+  addInfoWindowToMarkers(timeout: number = 0) {
     this.markers.forEach((marker) => {
       const infoWindow = new google.maps.InfoWindow({
         content: `<b>${marker.getTitle()}</b>` || 'Unknown',
@@ -37,7 +64,6 @@ export class MapStore {
 
       const window = { isOpen: false };
 
-      //proxy the infoWindow close and open methods
       infoWindow.close = new Proxy(infoWindow.close, {
         apply: (target, thisArg, argumentsList) => {
           window.isOpen = false;
@@ -53,34 +79,15 @@ export class MapStore {
 
       infoWindow.open(this.map, marker);
 
-      // const toggleInfoWindow = () => {
-      //   if (window.isOpen) {
-      //     infoWindow.close();
-      //     window.isOpen = false;
-      //   } else {
-      //     infoWindow.open(this.map, marker);
-      //     window.isOpen = true;
-      //   }
-      // };
+      if (timeout) setTimeout(() => infoWindow.close(), timeout);
 
       marker.addListener('click', () => {
-        if (window.isOpen) {
-          infoWindow.close();
-          // window.isOpen = false;
-        } else {
-          infoWindow.open(this.map, marker);
-          // window.isOpen = true;
-        }
+        if (window.isOpen) return infoWindow.close();
+
+        infoWindow.open(this.map, marker);
       });
     });
   }
-
-  getLocation = () => {
-    return {
-      lat: this.myLocation?.lat(),
-      lng: this.myLocation?.lng(),
-    };
-  };
 
   displayStatus(status: string) {
     if (!status) {
@@ -103,7 +110,9 @@ export class MapStore {
       return;
     }
 
-    this.isMyLocationLoading = true;
+    runInAction(() => {
+      this.isMyLocationLoading = true;
+    });
     if (navigator.geolocation) {
       if (this.watchId) navigator.geolocation.clearWatch(this.watchId);
 
@@ -126,7 +135,6 @@ export class MapStore {
           runInAction(() => {
             this.myLocation = newLocation;
           });
-          this.showMyLocation(newLocation);
 
           //TODO: trigger pusher event to update location
         },
@@ -151,6 +159,10 @@ export class MapStore {
     if (!location) return console.error('No location provided');
     if (!this.map) return console.error('No map found');
 
+    runInAction(() => {
+      this.isMyLocationLoading = true;
+    });
+
     this.map.setZoom(16);
     this.map.panTo(location);
     this.myLocationMarker = new google.maps.Marker({
@@ -159,36 +171,9 @@ export class MapStore {
       title: 'You are here',
     });
 
-    const contentString = `
-      <div class="info-window">
-        <p>Here I am!</p>
-      </div>
-      `;
-
-    this.infoWindow?.close();
-    this.infoWindow = null;
-
-    this.infoWindow = new google.maps.InfoWindow({
-      content: contentString,
+    runInAction(() => {
+      this.isMyLocationLoading = false;
     });
-
-    setTimeout(() => {
-      this.infoWindow?.close();
-    }, 3000);
-
-    this.infoWindow?.open(this.map, this.myLocationMarker);
-    this.myLocationMarker.addListener('click', () => {
-      if (this.hasInfoWindowOpen) {
-        this.infoWindow?.close();
-        this.hasInfoWindowOpen = false;
-        return;
-      }
-
-      this.infoWindow?.open(this.map, this.myLocationMarker);
-      this.hasInfoWindowOpen = true;
-    });
-
-    this.isMyLocationLoading = false;
   }
 
   async startMap() {
