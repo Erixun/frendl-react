@@ -89,17 +89,18 @@ const DrawerWelcome = ({
         runInAction(() => {
           map.zone = createZone(map, data);
           map.zoneId = data.zoneId;
-          const members = data.members || fakeMembers;
-          //create a google maps marker for each member location
-          members.forEach((member: any) => {
-            const marker = new google.maps.Marker({
-              position: member.location,
-              map: map.map,
-              title: member.username,
-            });
-            map.markers.push(marker);
-          });
-          map.addInfoWindowToMarkers();
+          // const members = data.members || fakeMembers;
+          // //create a google maps marker for each member location
+          // members.forEach((member: any) => {
+          //   const marker = new google.maps.Marker({
+          //     position: member.location,
+          //     map: map.map,
+          //     title: member.username,
+          //   });
+          //   map.markers.push(marker);
+          // });
+          // map.placeMarkers();
+          // map.addInfoWindowToMarkers();
         });
         setSuccessCreateZone('Zone created! Entering now...');
         setTimeout(() => {
