@@ -13,25 +13,20 @@ zoneRouter.post('/', (req, res) => {
 
   const createdAt = new Date().toISOString();
   const updatedAt = createdAt;
-  const createdBy = 'Erixun';
+  const createdBy = 'Erik Emanuel';
   console.log('req.body', req.body);
 
   console.log('user location: ', req.body.location ?? 'undefined');
 
-  //generate array of member objects with online status, location, etc.
   const members = [
     {
       username: createdBy,
       status: 'online',
-      location: req.body.location ?? {
-        lat: 0,
-        lng: 0,
-      },
+      location: req.body.location,
     },
     {
       username: 'Melvin Moore',
       status: 'offline',
-      //set location to some coordinates in Solna, Sweden
       location: {
         lat: 59.36,
         lng: 18.05,
@@ -40,7 +35,6 @@ zoneRouter.post('/', (req, res) => {
     {
       username: 'Malva Melin',
       status: 'offline',
-      //set location to some other coordinates in Solna, Sweden
       location: {
         lat: 59.365,
         lng: 18.1,
@@ -114,6 +108,11 @@ zoneRouter.post('/:id/exit', isValidZoneId, (req, res) => {
   res.send({ message: `Request to exit zone ${zoneId} sent!` });
 });
 
+/**
+ * Generates a random zone id with 7 characters,
+ * digits and uppercase letters.
+ * @returns A random zone id.
+ */
 export function generateZoneId() {
   return Math.random().toString(36).substring(2, 9).toUpperCase();
 }
