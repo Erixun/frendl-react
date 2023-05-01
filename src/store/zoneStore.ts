@@ -1,7 +1,5 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import { MapStore } from './mapStore';
-import { members as fakeMembers } from '../testData';
-import { info } from 'sass';
 
 const ZoneMenuOption = {
   MEMBERS: 'members',
@@ -62,7 +60,6 @@ export class ZoneStore implements Zone {
         infoWindow.open(map.map, marker);
         member.hasInfoWindowOpen = true;
       });
-      // map.markers.push(marker);
     });
 
     this.map.displayMemberLocations();
@@ -102,19 +99,8 @@ export class ZoneStore implements Zone {
   }
 }
 
-export const createZone = (map: MapStore, zone: Zone) => {
-  // const members = zone.members || fakeMembers;
-  //         //create a google maps marker for each member location
-  //         members.forEach((member: any) => {
-  //           const marker = new google.maps.Marker({
-  //             position: member.location,
-  //             map: map.map,
-  //             title: member.username,
-  //           });
-  //           map.markers.push(marker);
-  //         });
-  return new ZoneStore(map, zone);
-};
+export const createZone = (map: MapStore, zone: Zone) =>
+  new ZoneStore(map, zone);
 
 export interface Zone {
   message?: string;

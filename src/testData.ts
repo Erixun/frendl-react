@@ -12,14 +12,6 @@ const currentUser = {
 };
 
 const members = [
-  // {
-  //   username: 'Erik Emanuel',
-  //   status: 'online',
-  //   location: {
-  //     lat: 59.35,
-  //     lng: 18.04,
-  //   },
-  // },
   currentUser,
   {
     userId: '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bee',

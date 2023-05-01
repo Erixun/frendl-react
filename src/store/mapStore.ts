@@ -25,7 +25,7 @@ export class MapStore {
   }
 
   get userLocation() {
-    if (!this.myLocation) return this.currentUser.location; // undefined;
+    if (!this.myLocation) return this.currentUser.location;
 
     return {
       lat: this.myLocation.lat(),
@@ -98,7 +98,6 @@ export class MapStore {
   displayStatus(status: string) {
     if (!status) {
       this.myStatus = '';
-      // this.infoWindow?.close();
       console.error('No status provided');
     }
     this.myStatus = `<p>${status}</p>`;
@@ -106,27 +105,9 @@ export class MapStore {
       (member) => member.username === this.currentUser.username
     );
     if (!my) return console.error('No member found for current user');
-    // my.marker?.setMap(null);
-    // my.infoWindow?.close();
-    // my.infoWindow = undefined;
-    console.log(my);
-    console.log(my.infoWindow);
 
     const content = `<b>${my.username}</b><br>${status}`;
     my.infoWindow?.setContent(content);
-
-    // if (!marker) return console.error('No marker found for current user');
-
-    // if (!myMarker) return console.error('No marker found for current user');
-    // console.log(myMarker);
-    // myMarker.setTitle(status);
-
-    // this.infoWindow?.close();
-    // this.infoWindow = null;
-    // this.infoWindow = new google.maps.InfoWindow({
-    //   content: status,
-    // });
-    // this.infoWindow?.open(this.map, this.myLocationMarker);
   }
 
   findMyLocation() {
@@ -190,11 +171,6 @@ export class MapStore {
 
     this.map.setZoom(16);
     this.map.panTo(location);
-    // this.myLocationMarker = new google.maps.Marker({
-    //   position: location,
-    //   map: this.map,
-    //   title: 'You are here',
-    // });
 
     runInAction(() => {
       this.isMyLocationLoading = false;
