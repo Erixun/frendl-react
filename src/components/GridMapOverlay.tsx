@@ -26,8 +26,9 @@ import Pusher from 'pusher-js';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './GridMapOverlay.css';
-import { ZoneMember } from '../store/zoneStore';
-import { members } from '../testData';
+import { ZoneMember, ZoneMenuOption } from '../store/zoneStore';
+import { currentUser, members } from '../testData';
+import { runInAction, set } from 'mobx';
 
 const GridMapOverlay = observer(
   ({ map, onOpenDrawer }: { map: MapStore; onOpenDrawer: () => void }) => {
@@ -47,10 +48,18 @@ const GridMapOverlay = observer(
 
     const [status, setStatus] = useState('');
     const submitStatus = (e: any) => {
+      runInAction(() => {
+        if (!map.zone) return;
+        map.zone.toggledMenuOption === ZoneMenuOption.STATUS
+          ? (map.zone.toggledMenuOption = ZoneMenuOption.NONE)
+          : (map.zone.toggledMenuOption = ZoneMenuOption.STATUS);
+      });
+
       e.preventDefault();
       console.log('submitStatus');
       console.log(status);
       map.displayStatus(status);
+      if (status) map.zone?.makeLogEntry(currentUser.username, status);
       //TODO: add to status log
       setStatus('');
       setCanSubmitStatus(false);
@@ -77,6 +86,8 @@ const GridMapOverlay = observer(
       console.log(
         'Pusher subscription & channel binds commented out to prevent reaching quota'
       );
+
+      if (!map.zoneId) return exitZone();
 
       //set map zoom level and center so that all markers are visible
       map.displayMemberLocations();
@@ -159,8 +170,20 @@ const GridMapOverlay = observer(
 
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-    const toggleZoneDrawer = () => {
-      setIsDrawerOpen(!isDrawerOpen);
+    const toggleZoneDrawer = (menuOption: string) => {
+      runInAction(() => {
+        const { zone } = map;
+        if (zone) {
+          const isOpen = zone.toggledMenuOption === menuOption;
+          isOpen
+            ? (zone.toggledMenuOption = '')
+            : (zone.toggledMenuOption = menuOption);
+            setIsDrawerOpen(!isOpen);
+        }
+        //  zone.toggledMenuOption === menuOption?  zone.toggledMenuOption = '';
+        // zone.toggledMenuOption = menuOption;
+      });
+      setCanSubmitStatus(false);
     };
 
     const closeZoneDrawer = () => {
@@ -210,8 +233,9 @@ const GridMapOverlay = observer(
             <IconButton
               colorScheme="teal"
               aria-label="Toggle Members"
-              isActive={isDrawerOpen}
-              onClick={() => toggleZoneDrawer()}
+              // isActive={isDrawerOpen}
+              isActive={map.zone?.toggledMenuOption === ZoneMenuOption.MEMBERS}
+              onClick={() => toggleZoneDrawer(ZoneMenuOption.MEMBERS)}
               size="lg"
               marginTop={'10px'}
               icon={<Icon as={IoPeople} boxSize={7} />}
@@ -219,14 +243,29 @@ const GridMapOverlay = observer(
             <IconButton
               colorScheme="teal"
               aria-label="Toggle Status Log"
-              onClick={notify}
+              // onClick={notify}
+              isActive={map.zone?.toggledMenuOption === ZoneMenuOption.LOGS}
+              onClick={() => toggleZoneDrawer(ZoneMenuOption.LOGS)}
               size="lg"
               marginTop={'10px'}
               icon={<Icon as={BsJournalText} boxSize={6} />}
             />
             <IconButton
-              onClick={() => setCanSubmitStatus(!canSubmitStatus)}
-              isActive={canSubmitStatus}
+              onClick={() => {
+                runInAction(() => {
+                  if (!map.zone) return;
+                  const isToggled =
+                    map.zone.toggledMenuOption === ZoneMenuOption.STATUS;
+                  setCanSubmitStatus(!isToggled);
+                  if (isToggled) return (map.zone.toggledMenuOption = '');
+
+                  map.zone.toggledMenuOption = ZoneMenuOption.STATUS;
+                  // setCanSubmitStatus(!canSubmitStatus);
+                });
+                setIsDrawerOpen(false);
+              }}
+              // isActive={canSubmitStatus}
+              isActive={map.zone?.toggledMenuOption === ZoneMenuOption.STATUS}
               colorScheme="teal"
               aria-label="Toggle Notify Status"
               size="lg"
@@ -240,6 +279,7 @@ const GridMapOverlay = observer(
               marginTop={'10px'}
               icon={<ChatIcon boxSize={5} />}
             />
+            {/* TODO: enable find & track marked member */}
             <IconButton
               onClick={findMe}
               isLoading={map.isMyLocationLoading}
@@ -265,7 +305,7 @@ const GridMapOverlay = observer(
           offsetY="40px"
           style={{
             gridArea: 'messenger',
-            pointerEvents: 'none'
+            pointerEvents: 'none',
           }}
         >
           {/* TODO: Create component */}
@@ -288,7 +328,38 @@ const GridMapOverlay = observer(
           </div>
         </SlideFade>
 
-        <Drawer
+        {/* TODO: create reusable component */}
+        <ZoneDrawer
+          title="Zone Members"
+          // data={getMembers()}
+          isOpen={isDrawerOpen}
+          onClose={closeZoneDrawer}
+        >
+          {/* <List spacing={3} paddingLeft={'0'} fontSize={'1.2rem'}> */}
+          {/* TODO: if is Members toggled */}
+          {map.zone?.toggledMenuOption === ZoneMenuOption.MEMBERS &&
+            getMembers().map((member, i) => (
+              <ZoneMemberItem
+                key={i}
+                member={member}
+                onShowLocation={showLocation}
+                onLockTarget={lockTarget}
+                currentTarget={target}
+              />
+            ))}
+          {map.zone?.toggledMenuOption === ZoneMenuOption.LOGS &&
+            // <ZoneLogs />
+            map.zone.statusLogs.map((log, i) => (
+              // <ZoneLogItem key={i} log={log} />
+              <div key={i}>
+                <div>{log.username}:</div>
+                <div>{log.createdAt.toDateString()}</div>
+                <div>{log.statusMessage}</div>
+              </div>
+            ))}
+          {/* </List> */}
+        </ZoneDrawer>
+        {/* <Drawer
           isOpen={isDrawerOpen}
           placement="left"
           onClose={closeZoneDrawer}
@@ -345,11 +416,131 @@ const GridMapOverlay = observer(
               </Button>
             </DrawerFooter>
           </DrawerContent>
-        </Drawer>
+        </Drawer> */}
       </div>
     );
   }
 );
+
+export const ZoneDrawer = ({
+  title,
+  // data,
+  isOpen,
+  onClose,
+  children,
+}: {
+  title: string;
+  // data: Array<any>;
+  isOpen: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}) => {
+  return (
+    <Drawer
+      // trapFocus={false}
+      isOpen={isOpen}
+      placement="left"
+      onClose={onClose}
+      isFullHeight={false}
+      size={isLandscape() ? 'xs' : 'sm'}
+      closeOnOverlayClick={false}
+    >
+      <DrawerContent className="zone-drawer-content">
+        <DrawerCloseButton />
+        <DrawerHeader>{title}</DrawerHeader>
+
+        <DrawerBody>
+          <List spacing={3} paddingLeft={'0'} fontSize={'1.2rem'}>
+            {children}
+            {/* {data.map((member, i) => (
+          <ListItem
+            className="zone-member"
+            key={i}
+            onClick={showLocation(member)}
+          >
+            <IconButton
+              sx={{
+                '&:hover': { color: 'red' },
+                backgroundColor: 'transparent',
+                border: 'none',
+                outline: 'none',
+                boxShadow: 'none',
+                padding: '0',
+              }}
+              aria-label="Target"
+              onClick={lockTarget(member)}
+              icon={
+                target === member.username ? (
+                  <BiTargetLock size={20} />
+                ) : (
+                  <TfiTarget />
+                )
+              }
+            />
+
+            <ListIcon
+              className="person-circle"
+              as={IoPersonCircle}
+              color={member.status === 'online' ? 'green.500' : 'grey'}
+            />
+            <span className="name">{member.username}</span>
+          </ListItem>
+        ))} */}
+          </List>
+        </DrawerBody>
+
+        <DrawerFooter>
+          <Button variant="outline" mr={3} onClick={onClose}>
+            Close
+          </Button>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
+  );
+};
+
+const ZoneMemberItem = ({
+  member,
+  currentTarget,
+  onLockTarget,
+  onShowLocation,
+}: {
+  member: any;
+  currentTarget: string;
+  onLockTarget: (member: any) => () => void;
+  onShowLocation: (member: any) => () => void;
+}) => {
+  return (
+    <ListItem className="zone-member" onClick={onShowLocation(member)}>
+      <IconButton
+        sx={{
+          '&:hover': { color: 'red' },
+          backgroundColor: 'transparent',
+          border: 'none',
+          outline: 'none',
+          boxShadow: 'none',
+          padding: '0',
+        }}
+        aria-label="Target"
+        onClick={onLockTarget(member)}
+        icon={
+          currentTarget === member.username ? (
+            <BiTargetLock size={20} />
+          ) : (
+            <TfiTarget />
+          )
+        }
+      />
+
+      <ListIcon
+        className="person-circle"
+        as={IoPersonCircle}
+        color={member.status === 'online' ? 'green.500' : 'grey'}
+      />
+      <span className="name">{member.username}</span>
+    </ListItem>
+  );
+};
 
 function isLandscape() {
   const doc = document.documentElement;

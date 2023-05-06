@@ -1,16 +1,24 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import { MapStore } from './mapStore';
 
-const ZoneMenuOption = {
-  MEMBERS: 'members',
-  LOGS: 'logs',
-  STATUS: 'status',
-  CHAT: 'chat',
-  LOCATE: 'locate',
-  LEAVE: 'leave',
+export const ZoneMenuOption = {
+  MEMBERS: 'MEMBERS',
+  LOGS: 'LOGS',
+  STATUS: 'STATUS',
+  CHAT: 'CHAT',
+  LOCATE: 'LOCATE',
+  LEAVE: 'LEAVE',
+  NONE: 'NONE',
 };
 
-type ZoneMenuOption = keyof typeof ZoneMenuOption;
+// export type ZoneMenuOptions = {
+//   [key in ZoneMenuOption]: ZoneMenuOption;
+// };
+
+// export type ZoneMenuValue =
+//   (typeof ZoneMenuOption)[keyof typeof ZoneMenuOption];
+
+// export type ZoneMenuOption = keyof typeof ZoneMenuOption;
 
 export class ZoneStore implements Zone {
   map: MapStore;
@@ -20,10 +28,11 @@ export class ZoneStore implements Zone {
   updatedAt: Date;
   createdBy: string;
   members: ZoneMember[] = [];
+  statusLogs: ZoneStatusLog[] = [];
   focusedMember?: ZoneMember | null;
   focusIntervalId: NodeJS.Timeout | undefined;
 
-  toggledMenuOption: ZoneMenuOption | undefined;
+  toggledMenuOption: string | undefined;
 
   constructor(map: MapStore, zone: Zone) {
     makeAutoObservable(this);
@@ -35,6 +44,7 @@ export class ZoneStore implements Zone {
     this.updatedAt = zone.updatedAt;
     this.createdBy = zone.createdBy;
     this.members = zone.members;
+    this.statusLogs = zone.statusLogs || [];
 
     this.members.forEach((member) => {
       const marker = new google.maps.Marker({
@@ -97,6 +107,16 @@ export class ZoneStore implements Zone {
     return this.members.find((member) => member.username === username)
       ?.location;
   }
+
+  makeLogEntry(username: string, statusMessage: string) {
+    this.statusLogs.push({
+      username,
+      statusMessage,
+      createdAt: new Date(),
+    });
+
+    console.log('statusLogs', this.statusLogs);
+  }
 }
 
 export const createZone = (map: MapStore, zone: Zone) =>
@@ -110,6 +130,13 @@ export interface Zone {
   updatedAt: Date;
   createdBy: string;
   members: ZoneMember[];
+  statusLogs: ZoneStatusLog[];
+}
+
+export interface ZoneStatusLog {
+  username: string;
+  statusMessage: string;
+  createdAt: Date;
 }
 
 export interface ZoneMember {
