@@ -11,7 +11,7 @@ export class MapStore {
   hasInfoWindowOpen = false;
   isMyLocationLoading = false;
   currentUser: ZoneMember;
-  myStatus = ''; //TODO: remove/move this?
+  currentUserStatus = '';
   zone: ZoneStore | undefined;
   zoneId: string | undefined;
   zoneChannel: Channel | undefined;
@@ -97,10 +97,10 @@ export class MapStore {
 
   displayStatus(status: string) {
     if (!status) {
-      this.myStatus = '';
+      this.currentUserStatus = '';
       console.error('No status provided');
     }
-    this.myStatus = `<p>${status}</p>`;
+    this.currentUserStatus = `<p>${status}</p>`;
     const my = this.zone?.members.find(
       (member) => member.username === this.currentUser.username
     );
@@ -152,7 +152,6 @@ export class MapStore {
     }
 
     cancelLoading(this);
-    // console.error('Geolocation is not supported by this browser.');
 
     function cancelLoading(store: MapStore) {
       runInAction(() => {

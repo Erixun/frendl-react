@@ -1,6 +1,5 @@
 import { ChatIcon, CloseIcon, HamburgerIcon } from '@chakra-ui/icons';
 import {
-  Box,
   Button,
   Drawer,
   DrawerBody,
@@ -60,7 +59,7 @@ const GridMapOverlay = observer(
       console.log(status);
       map.displayStatus(status);
       if (status) map.zone?.makeLogEntry(currentUser.username, status);
-      //TODO: add to status log
+
       setStatus('');
       setCanSubmitStatus(false);
     };
@@ -170,23 +169,26 @@ const GridMapOverlay = observer(
 
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-    const toggleZoneDrawer = (menuOption: string) => {
+    const toggleZoneDrawer = (menuOption: string) => () => {
       runInAction(() => {
         const { zone } = map;
         if (zone) {
-          const isOpen = zone.toggledMenuOption === menuOption;
-          isOpen
-            ? (zone.toggledMenuOption = '')
-            : (zone.toggledMenuOption = menuOption);
-            setIsDrawerOpen(!isOpen);
+          const isToggledOption = zone.toggledMenuOption === menuOption;
+          //
+          //   ? (zone.toggledMenuOption = '')
+          //   : (zone.toggledMenuOption = menuOption);
+          //   zone.toggledMenuOption
+          zone.toggledMenuOption = isToggledOption ? '' : menuOption;
+          const isOpen = zone.isDrawerOpen;
+          setIsDrawerOpen(isOpen);
         }
-        //  zone.toggledMenuOption === menuOption?  zone.toggledMenuOption = '';
-        // zone.toggledMenuOption = menuOption;
       });
       setCanSubmitStatus(false);
     };
 
     const closeZoneDrawer = () => {
+      if (map.zone) map.zone.toggledMenuOption = ZoneMenuOption.NONE;
+      
       setIsDrawerOpen(false);
     };
 
@@ -197,16 +199,57 @@ const GridMapOverlay = observer(
     };
 
     const [target, setTarget] = useState('');
+    const toggleTargetLock = () => {
+      if(!map.zone) return;
 
-    const lockTarget = (member: ZoneMember) => {
+      const memberInFocus = map.zone.focusedMember
+      if(memberInFocus) {
+        map.zone.setFocus(null)
+        setTarget(NONE)
+        return map.zone.toggledMenuOption = NONE;
+      }
+
+      map.zone.setFocus(map.currentUser)
+      setTarget(map.currentUser.username)
+      map.zone.toggledMenuOption = LOCATE;
+
+    };
+
+    const lockTarget = (member: ZoneMember | null) => {
+      const { zone } = map;
+      const targetable =
+        typeof member === 'string' ? zone?.getMember(member) : member;
+      const { username } = targetable ?? {};
+
       return () => {
-        const { username } = member;
-        const isCurrentTarget = target === username;
-        const newTarget = isCurrentTarget ? '' : username;
-        setTarget(newTarget);
-        if (isCurrentTarget) return map.zone?.setFocus(null);
+        console.log('lockTarget', targetable, username);
+        const isToggledOption = zone?.toggledMenuOption === LOCATE;
+        const hasTargetLock = Boolean(target);
+        const canLockTarget = zone && targetable && username;
 
-        map.zone?.setFocus(member);
+        if (hasTargetLock) {
+          zone!.toggledMenuOption = '';
+          console.log('isToggledOption', isToggledOption);
+          setTarget('');
+        } else if (canLockTarget) {
+          zone.toggledMenuOption = LOCATE;
+
+          const isCurrentTarget = target === username;
+          const newTarget = isCurrentTarget ? '' : username;
+          setTarget(newTarget);
+          if (isCurrentTarget) return zone.setFocus(null);
+
+          return zone.setFocus(targetable);
+        }
+        zone!.toggledMenuOption = LOCATE;
+        const user = map.currentUser;
+        setTarget(user.username);
+        if (isCurrentTarget(user.username)) return zone?.setFocus(null);
+        zone?.setFocus(user);
+
+        function isCurrentTarget(username: string) {
+          return target === username;
+        }
       };
     };
 
@@ -214,13 +257,27 @@ const GridMapOverlay = observer(
       return map.zone?.members || members;
     };
 
+    const isOptionToggled = (option: string) => {
+      return map.zone?.toggledMenuOption === option;
+    };
+
+    const hasDrawerOpen = () => {
+      const { zone } = map;
+      return zone?.isDrawerOpen ?? false;
+      // if (zone)
+      //   return [MEMBERS, LOGS, STATUS].includes(zone.toggledMenuOption ?? '');
+      // return false;
+    };
+
+    const { MEMBERS, LOGS, STATUS, LOCATE, NONE } = ZoneMenuOption;
+
     return (
       <div className="grid-map-overlay">
         <ToastContainer />
         <IconButton
           onClick={onToggle}
           colorScheme={!isOpen ? 'teal' : 'gray'}
-          aria-label="Toggle DrawerMenu"
+          aria-label="Toggle Menu Options"
           size="lg"
           margin={'10px'}
           border={isOpen ? '1px solid black' : 'none'}
@@ -233,19 +290,17 @@ const GridMapOverlay = observer(
             <IconButton
               colorScheme="teal"
               aria-label="Toggle Members"
-              // isActive={isDrawerOpen}
-              isActive={map.zone?.toggledMenuOption === ZoneMenuOption.MEMBERS}
-              onClick={() => toggleZoneDrawer(ZoneMenuOption.MEMBERS)}
+              isActive={isOptionToggled(MEMBERS)}
+              onClick={toggleZoneDrawer(MEMBERS)}
               size="lg"
               marginTop={'10px'}
               icon={<Icon as={IoPeople} boxSize={7} />}
             />
             <IconButton
               colorScheme="teal"
-              aria-label="Toggle Status Log"
-              // onClick={notify}
-              isActive={map.zone?.toggledMenuOption === ZoneMenuOption.LOGS}
-              onClick={() => toggleZoneDrawer(ZoneMenuOption.LOGS)}
+              aria-label="Toggle Chat"
+              isActive={isOptionToggled(LOGS)}
+              onClick={toggleZoneDrawer(LOGS)}
               size="lg"
               marginTop={'10px'}
               icon={<Icon as={BsJournalText} boxSize={6} />}
@@ -254,37 +309,32 @@ const GridMapOverlay = observer(
               onClick={() => {
                 runInAction(() => {
                   if (!map.zone) return;
-                  const isToggled =
-                    map.zone.toggledMenuOption === ZoneMenuOption.STATUS;
+                  const isToggled = isOptionToggled(status);
                   setCanSubmitStatus(!isToggled);
                   if (isToggled) return (map.zone.toggledMenuOption = '');
 
-                  map.zone.toggledMenuOption = ZoneMenuOption.STATUS;
-                  // setCanSubmitStatus(!canSubmitStatus);
+                  map.zone.toggledMenuOption = STATUS;
                 });
                 setIsDrawerOpen(false);
               }}
-              // isActive={canSubmitStatus}
-              isActive={map.zone?.toggledMenuOption === ZoneMenuOption.STATUS}
+              isActive={isOptionToggled(STATUS)}
               colorScheme="teal"
-              aria-label="Toggle Notify Status"
+              aria-label="Toggle Messenger"
               size="lg"
               marginTop={'10px'}
               icon={<Icon as={AiOutlineNotification} boxSize={6} />}
             />
-            <IconButton
-              colorScheme="teal"
-              aria-label="Toggle Chat"
-              size="lg"
-              marginTop={'10px'}
-              icon={<ChatIcon boxSize={5} />}
-            />
             {/* TODO: enable find & track marked member */}
             <IconButton
-              onClick={findMe}
+              // onClick={findMe}
+              // onClick={lockTarget(target)}
+              onClick={toggleTargetLock}
+              isActive={!!target}
+              // isActive={isOptionToggled(LOCATE) || !!target}
+              // isActive={Boolean(map.zone?.focusedMember)}
               isLoading={map.isMyLocationLoading}
               colorScheme="teal"
-              aria-label="Find my location"
+              aria-label="Find target location"
               size="lg"
               marginTop={'10px'}
               icon={<Icon as={BiTargetLock} boxSize={7} />}
@@ -292,7 +342,7 @@ const GridMapOverlay = observer(
             <IconButton
               onClick={exitZone}
               colorScheme="teal"
-              aria-label="Toggle DrawerMenu"
+              aria-label="Exit Zone"
               size="lg"
               marginTop={'10px'}
               icon={<Icon as={BiLogOutCircle} boxSize={7} />}
@@ -316,7 +366,7 @@ const GridMapOverlay = observer(
                   autoFocus
                   className="input-status"
                   type="text"
-                  placeholder="Enter your status"
+                  placeholder="Enter a message..."
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
                 />
@@ -331,13 +381,12 @@ const GridMapOverlay = observer(
         {/* TODO: create reusable component */}
         <ZoneDrawer
           title="Zone Members"
-          // data={getMembers()}
-          isOpen={isDrawerOpen}
+          // isOpen={isDrawerOpen}
+          isOpen={map.zone?.isDrawerOpen ?? false}
           onClose={closeZoneDrawer}
         >
-          {/* <List spacing={3} paddingLeft={'0'} fontSize={'1.2rem'}> */}
-          {/* TODO: if is Members toggled */}
-          {map.zone?.toggledMenuOption === ZoneMenuOption.MEMBERS &&
+          {isOptionToggled(MEMBERS) &&
+            //TODO: <ZoneMembers />
             getMembers().map((member, i) => (
               <ZoneMemberItem
                 key={i}
@@ -347,9 +396,9 @@ const GridMapOverlay = observer(
                 currentTarget={target}
               />
             ))}
-          {map.zone?.toggledMenuOption === ZoneMenuOption.LOGS &&
-            // <ZoneLogs />
-            map.zone.statusLogs.map((log, i) => (
+          {isOptionToggled(LOGS) &&
+            //TODO: <ZoneLogs />
+            map.zone?.statusLogs.map((log, i) => (
               // <ZoneLogItem key={i} log={log} />
               <div key={i}>
                 <div>{log.username}:</div>
@@ -357,66 +406,7 @@ const GridMapOverlay = observer(
                 <div>{log.statusMessage}</div>
               </div>
             ))}
-          {/* </List> */}
         </ZoneDrawer>
-        {/* <Drawer
-          isOpen={isDrawerOpen}
-          placement="left"
-          onClose={closeZoneDrawer}
-          isFullHeight={false}
-          size={isLandscape() ? 'xs' : 'sm'}
-          closeOnOverlayClick={false}
-        >
-          <DrawerContent className="zone-drawer-content">
-            <DrawerCloseButton />
-            <DrawerHeader>Zone Members</DrawerHeader>
-
-            <DrawerBody>
-              <List spacing={3} paddingLeft={'0'} fontSize={'1.2rem'}>
-                {getMembers().map((member, i) => (
-                  <ListItem
-                    className="zone-member"
-                    key={i}
-                    onClick={showLocation(member)}
-                  >
-                    <IconButton
-                      sx={{
-                        '&:hover': { color: 'red' },
-                        backgroundColor: 'transparent',
-                        border: 'none',
-                        outline: 'none',
-                        boxShadow: 'none',
-                        padding: '0',
-                      }}
-                      aria-label="Target"
-                      onClick={lockTarget(member)}
-                      icon={
-                        target === member.username ? (
-                          <BiTargetLock size={20} />
-                        ) : (
-                          <TfiTarget />
-                        )
-                      }
-                    />
-
-                    <ListIcon
-                      className="person-circle"
-                      as={IoPersonCircle}
-                      color={member.status === 'online' ? 'green.500' : 'grey'}
-                    />
-                    <span className="name">{member.username}</span>
-                  </ListItem>
-                ))}
-              </List>
-            </DrawerBody>
-
-            <DrawerFooter>
-              <Button variant="outline" mr={3} onClick={closeZoneDrawer}>
-                Close
-              </Button>
-            </DrawerFooter>
-          </DrawerContent>
-        </Drawer> */}
       </div>
     );
   }
@@ -424,20 +414,17 @@ const GridMapOverlay = observer(
 
 export const ZoneDrawer = ({
   title,
-  // data,
   isOpen,
   onClose,
   children,
 }: {
   title: string;
-  // data: Array<any>;
   isOpen: boolean;
   onClose: () => void;
   children: React.ReactNode;
 }) => {
   return (
     <Drawer
-      // trapFocus={false}
       isOpen={isOpen}
       placement="left"
       onClose={onClose}
@@ -452,40 +439,6 @@ export const ZoneDrawer = ({
         <DrawerBody>
           <List spacing={3} paddingLeft={'0'} fontSize={'1.2rem'}>
             {children}
-            {/* {data.map((member, i) => (
-          <ListItem
-            className="zone-member"
-            key={i}
-            onClick={showLocation(member)}
-          >
-            <IconButton
-              sx={{
-                '&:hover': { color: 'red' },
-                backgroundColor: 'transparent',
-                border: 'none',
-                outline: 'none',
-                boxShadow: 'none',
-                padding: '0',
-              }}
-              aria-label="Target"
-              onClick={lockTarget(member)}
-              icon={
-                target === member.username ? (
-                  <BiTargetLock size={20} />
-                ) : (
-                  <TfiTarget />
-                )
-              }
-            />
-
-            <ListIcon
-              className="person-circle"
-              as={IoPersonCircle}
-              color={member.status === 'online' ? 'green.500' : 'grey'}
-            />
-            <span className="name">{member.username}</span>
-          </ListItem>
-        ))} */}
           </List>
         </DrawerBody>
 

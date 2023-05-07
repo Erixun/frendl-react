@@ -8,17 +8,8 @@ export const ZoneMenuOption = {
   CHAT: 'CHAT',
   LOCATE: 'LOCATE',
   LEAVE: 'LEAVE',
-  NONE: 'NONE',
+  NONE: '',
 };
-
-// export type ZoneMenuOptions = {
-//   [key in ZoneMenuOption]: ZoneMenuOption;
-// };
-
-// export type ZoneMenuValue =
-//   (typeof ZoneMenuOption)[keyof typeof ZoneMenuOption];
-
-// export type ZoneMenuOption = keyof typeof ZoneMenuOption;
 
 export class ZoneStore implements Zone {
   map: MapStore;
@@ -32,7 +23,8 @@ export class ZoneStore implements Zone {
   focusedMember?: ZoneMember | null;
   focusIntervalId: NodeJS.Timeout | undefined;
 
-  toggledMenuOption: string | undefined;
+  _toggledMenuOption: string | undefined;
+  isDrawerOpen = false;
 
   constructor(map: MapStore, zone: Zone) {
     makeAutoObservable(this);
@@ -85,6 +77,7 @@ export class ZoneStore implements Zone {
   setFocus(member: ZoneMember | null) {
     clearInterval(this.focusIntervalId);
     this.focusedMember = member;
+    // this.toggledMenuOption = ZoneMenuOption.LOCATE;
     //Continuously show the location of the focused member
     if (!member) return console.log('no member in focus');
     runInAction(() => {
@@ -108,7 +101,21 @@ export class ZoneStore implements Zone {
       ?.location;
   }
 
+  getMember(username: string) {
+    return this.members.find((member) => member.username === username);
+  }
+
+  get toggledMenuOption() {
+    return this._toggledMenuOption ?? '';
+  }
+  set toggledMenuOption(option: string) {
+    const isDrawerOption = ['MEMBERS', 'LOGS'].includes(option);
+    this.isDrawerOpen = isDrawerOption;
+    this._toggledMenuOption = option;
+  }
+
   makeLogEntry(username: string, statusMessage: string) {
+    //TODO: also post to server (using pusher?)
     this.statusLogs.push({
       username,
       statusMessage,
