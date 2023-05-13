@@ -261,14 +261,6 @@ const GridMapOverlay = observer(
       return map.zone?.toggledMenuOption === option;
     };
 
-    const hasDrawerOpen = () => {
-      const { zone } = map;
-      return zone?.isDrawerOpen ?? false;
-      // if (zone)
-      //   return [MEMBERS, LOGS, STATUS].includes(zone.toggledMenuOption ?? '');
-      // return false;
-    };
-
     const { MEMBERS, LOGS, STATUS, LOCATE, NONE } = ZoneMenuOption;
 
     return (
