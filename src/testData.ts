@@ -14,7 +14,7 @@ const currentUser = {
 const members = [
   currentUser,
   {
-    userId: '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bee',
+    userId: '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bef',
     username: 'Melvin Moore',
     status: 'offline',
     statusMessage: '',
@@ -24,7 +24,7 @@ const members = [
     },
   },
   {
-    userId: '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bef',
+    userId: '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bee',
     username: 'Malva Melin',
     status: 'online',
     statusMessage: '',
