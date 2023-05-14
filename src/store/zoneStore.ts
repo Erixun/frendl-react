@@ -19,6 +19,7 @@ export class ZoneStore implements Zone {
   updatedAt: Date;
   createdBy: string;
   members: ZoneMember[] = [];
+  memberMap = new Map<string, ZoneMember>();
   statusLogs: ZoneStatusLog[] = [];
   focusedMember?: ZoneMember | null;
   focusIntervalId: NodeJS.Timeout | undefined;
@@ -39,6 +40,8 @@ export class ZoneStore implements Zone {
     this.statusLogs = zone.statusLogs || [];
 
     this.members.forEach((member) => {
+      this.memberMap.set(member.userId, member);
+
       const marker = new google.maps.Marker({
         position: member.location,
         map: map.map,
@@ -65,6 +68,30 @@ export class ZoneStore implements Zone {
     });
 
     this.map.displayMemberLocations();
+  }
+
+  //TODO: Method to mark member locations on the map
+
+  //TODO: Method to update a specific member
+
+  updateLocation(userId: string, location: ZoneLocation) {
+    const validMember = this.memberMap.get(userId);
+    console.log('validMember', validMember);
+    console.log(
+      'attempting to update location for user',
+      userId,
+      'to',
+      location
+    );
+    if (validMember) {
+      validMember.location = location;
+
+      validMember.marker?.setPosition(location);
+
+      validMember.infoWindow?.setPosition(location);
+
+      this.memberMap.set(userId, validMember);
+    }
   }
 
   clear() {
@@ -137,6 +164,7 @@ export interface Zone {
   updatedAt: Date;
   createdBy: string;
   members: ZoneMember[];
+  memberMap?: Map<string, ZoneMember>;
   statusLogs: ZoneStatusLog[];
 }
 
@@ -147,6 +175,7 @@ export interface ZoneStatusLog {
 }
 
 export interface ZoneMember {
+  userId: string;
   username: string;
   status: string;
   statusMessage: string;
