@@ -20,11 +20,13 @@ zoneRouter.post('/', (req, res) => {
 
   const members = [
     {
+      userId: req.body.userId || '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed',
       username: createdBy,
       status: 'online',
       location: req.body.location,
     },
     {
+      userId: '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bef',
       username: 'Melvin Moore',
       status: 'offline',
       location: {
@@ -33,6 +35,7 @@ zoneRouter.post('/', (req, res) => {
       },
     },
     {
+      userId: '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bee',
       username: 'Malva Melin',
       status: 'offline',
       location: {
@@ -69,6 +72,7 @@ zoneRouter.get('/:id', isValidZoneId, (req, res) => {
 });
 
 //Invite user(s) to zone
+//TODO: determine if necessary
 zoneRouter.post('/:id/invite', isValidZoneId, (req, res) => {
   console.log('req.body', req.body);
   const invitees = req.body.invitees;
