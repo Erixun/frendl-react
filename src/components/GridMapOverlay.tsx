@@ -1,4 +1,4 @@
-import { ChatIcon, CloseIcon, HamburgerIcon } from '@chakra-ui/icons';
+import { CloseIcon, HamburgerIcon } from '@chakra-ui/icons';
 import {
   Button,
   Drawer,
@@ -21,21 +21,17 @@ import { IconButton, SlideFade, VStack, useDisclosure } from '@chakra-ui/react';
 import { observer } from 'mobx-react-lite';
 import { MapStore } from '../store/mapStore';
 import { useEffect, useState } from 'react';
-import Pusher from 'pusher-js';
 import { toast, ToastContainer } from 'react-toastify';
+import { ZoneMember, ZoneMenuOption, ZoneStore } from '../store/zoneStore';
+import { currentUser, members } from '../testData';
+import { runInAction } from 'mobx';
+import pusherClient from '../service/pusher';
 import 'react-toastify/dist/ReactToastify.css';
 import './GridMapOverlay.css';
-import { ZoneMember, ZoneMenuOption } from '../store/zoneStore';
-import { currentUser, members } from '../testData';
-import { runInAction, set } from 'mobx';
 
 const GridMapOverlay = observer(
   ({ map, onOpenDrawer }: { map: MapStore; onOpenDrawer: () => void }) => {
     const { isOpen, onToggle } = useDisclosure({ defaultIsOpen: true });
-
-    const findMe = () => {
-      map.findMyLocation();
-    };
 
     const exitZone = () => {
       onOpenDrawer();
@@ -47,13 +43,6 @@ const GridMapOverlay = observer(
 
     const [status, setStatus] = useState('');
     const submitStatus = (e: any) => {
-      runInAction(() => {
-        if (!map.zone) return;
-        map.zone.toggledMenuOption === ZoneMenuOption.STATUS
-          ? (map.zone.toggledMenuOption = ZoneMenuOption.NONE)
-          : (map.zone.toggledMenuOption = ZoneMenuOption.STATUS);
-      });
-
       e.preventDefault();
       console.log('submitStatus');
       console.log(status);
@@ -61,24 +50,9 @@ const GridMapOverlay = observer(
       if (status) map.zone?.makeLogEntry(currentUser.username, status);
 
       setStatus('');
-      setCanSubmitStatus(false);
     };
 
-    // Pusher.logToConsole = true;
-    //TODO: move to env
-    // const pusher = new Pusher('1810da9709de2631e7bc', {
-    //   authEndpoint: 'http://localhost:3000/api/pusher/auth',
-    //   cluster: 'eu',
-    // });
 
-    const [zoneState, setZoneState] = useState({
-      users_online: {},
-      center: {},
-      //make the locations object indexable by string
-      locations: {} as { [key: string]: Object },
-      current_user: '',
-      members: map.zone?.members || [],
-    });
 
     useEffect(() => {
       console.log('useEffect map.zoneId', map.zoneId);
@@ -91,45 +65,21 @@ const GridMapOverlay = observer(
       //set map zoom level and center so that all markers are visible
       map.displayMemberLocations();
 
-      // map.zoneChannel = pusher.subscribe(
-      //   `zone-channel-${map.zoneId}`
-      // );
+      map.zoneChannel = pusherClient.subscribe(`zone-channel-${map.zoneId}`);
 
-      // map.zoneChannel.bind(
-      //   'pusher:subscription_succeeded',
-      //   (members: any) => {
-      //     let location = {};
-      //     if (map.myLocation) {
-      //       const { lat, lng } = map.myLocation as google.maps.LatLng;
-      //       location = { lat: lat(), lng: lng() };
-      //     } else {
-      //       location = { lat: 0, lng: 0 };
-      //     }
-      //     const newState = {
-      //       ...zoneState,
-      //       users_online: members.members,
-      //       current_user: members.myID || 'unknown',
-      //       center: location,
-      //     };
-      //     newState.locations[`${members.myID}`] = location;
-      //     setZoneState(newState);
+      map.zoneChannel.bind('pusher:subscription_succeeded', () => {
+        console.log('pusher:subscription_succeeded');
+      });
 
-      //     console.log(zoneState);
-      //     notify(zoneState);
-      //   }
-      // );
+      map.zoneChannel.bind('location-update', (body: any) => {
+        //TODO: update ZoneStore
+        console.log('location-update');
+        console.log(body);
 
-      // map.zoneChannel.bind('location-update', (body: any) => {
+        const { userId, location } = body;
 
-      //   const newState = {
-      //     ...zoneState,
-      //     locations: {
-      //       ...zoneState.locations,
-      //       [`${body.username}`]: body.location,
-      //     },
-      //   };
-      //   setZoneState(newState);
-      // });
+        map.zone?.updateLocation(userId, location);
+      });
 
       // map.zoneChannel.bind('pusher:member_removed', (member) => {
       //   this.setState((prevState, props) => {
@@ -156,8 +106,10 @@ const GridMapOverlay = observer(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          zoneId: map.zoneId,
-          username: zoneState.current_user || 'unknown',
+          //TODO: user zoneStore instead?
+          zoneId: map.zone?.zoneId,
+          userId: map.currentUser.userId,
+          username: map.currentUser.username,
           location: map.userLocation,
         }),
       }).then((res) => {
@@ -167,6 +119,7 @@ const GridMapOverlay = observer(
       });
     }, [map.myLocation]);
 
+    //TODO: determine if this is needed
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
     const toggleZoneDrawer = (menuOption: string) => () => {
@@ -174,10 +127,6 @@ const GridMapOverlay = observer(
         const { zone } = map;
         if (zone) {
           const isToggledOption = zone.toggledMenuOption === menuOption;
-          //
-          //   ? (zone.toggledMenuOption = '')
-          //   : (zone.toggledMenuOption = menuOption);
-          //   zone.toggledMenuOption
           zone.toggledMenuOption = isToggledOption ? '' : menuOption;
           const isOpen = zone.isDrawerOpen;
           setIsDrawerOpen(isOpen);
@@ -188,7 +137,6 @@ const GridMapOverlay = observer(
 
     const closeZoneDrawer = () => {
       if (map.zone) map.zone.toggledMenuOption = ZoneMenuOption.NONE;
-      
       setIsDrawerOpen(false);
     };
 
@@ -200,19 +148,18 @@ const GridMapOverlay = observer(
 
     const [target, setTarget] = useState('');
     const toggleTargetLock = () => {
-      if(!map.zone) return;
+      if (!map.zone) return;
 
-      const memberInFocus = map.zone.focusedMember
-      if(memberInFocus) {
-        map.zone.setFocus(null)
-        setTarget(NONE)
-        return map.zone.toggledMenuOption = NONE;
+      const memberInFocus = map.zone.focusedMember;
+      if (memberInFocus) {
+        map.zone.setFocus(null);
+        setTarget(NONE);
+        return (map.zone.toggledMenuOption = NONE);
       }
 
-      map.zone.setFocus(map.currentUser)
-      setTarget(map.currentUser.username)
+      map.zone.setFocus(map.currentUser);
+      setTarget(map.currentUser.username);
       map.zone.toggledMenuOption = LOCATE;
-
     };
 
     const lockTarget = (member: ZoneMember | null) => {
@@ -301,7 +248,7 @@ const GridMapOverlay = observer(
               onClick={() => {
                 runInAction(() => {
                   if (!map.zone) return;
-                  const isToggled = isOptionToggled(status);
+                  const isToggled = isOptionToggled(STATUS);
                   setCanSubmitStatus(!isToggled);
                   if (isToggled) return (map.zone.toggledMenuOption = '');
 
@@ -316,14 +263,9 @@ const GridMapOverlay = observer(
               marginTop={'10px'}
               icon={<Icon as={AiOutlineNotification} boxSize={6} />}
             />
-            {/* TODO: enable find & track marked member */}
             <IconButton
-              // onClick={findMe}
-              // onClick={lockTarget(target)}
               onClick={toggleTargetLock}
               isActive={!!target}
-              // isActive={isOptionToggled(LOCATE) || !!target}
-              // isActive={Boolean(map.zone?.focusedMember)}
               isLoading={map.isMyLocationLoading}
               colorScheme="teal"
               aria-label="Find target location"
@@ -370,10 +312,8 @@ const GridMapOverlay = observer(
           </div>
         </SlideFade>
 
-        {/* TODO: create reusable component */}
         <ZoneDrawer
-          title="Zone Members"
-          // isOpen={isDrawerOpen}
+          title={isOptionToggled(MEMBERS) ? 'Zone Members' : 'Zone Chat'}
           isOpen={map.zone?.isDrawerOpen ?? false}
           onClose={closeZoneDrawer}
         >
@@ -388,21 +328,88 @@ const GridMapOverlay = observer(
                 currentTarget={target}
               />
             ))}
-          {isOptionToggled(LOGS) &&
-            //TODO: <ZoneLogs />
-            map.zone?.statusLogs.map((log, i) => (
-              // <ZoneLogItem key={i} log={log} />
-              <div key={i}>
-                <div>{log.username}:</div>
-                <div>{log.createdAt.toDateString()}</div>
-                <div>{log.statusMessage}</div>
-              </div>
-            ))}
+          {isOptionToggled(LOGS) && <ChatLogObserver zone={map.zone} />}
         </ZoneDrawer>
       </div>
     );
   }
 );
+
+export const ChatLog = ({ zone }: { zone?: ZoneStore }) => {
+  if (!zone) return null;
+
+  useEffect(() => {
+    console.log('ChatLog mounted');
+    const chatLog = document.getElementById('chat-log');
+    chatLog?.scrollIntoView({ behavior: 'auto', block: 'end' });
+  }, [zone.statusLogs]);
+
+  if (!zone.statusLogs.length)
+    return (
+      <p style={{ textAlign: 'center', fontStyle: 'italic' }}>
+        No messages yet
+      </p>
+    );
+
+  return (
+    <div
+      id="chat-log"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '100%',
+        gap: '1rem',
+        fontSize: '1rem',
+      }}
+    >
+      {zone.statusLogs.map((log, i, arr) => (
+        //TODO: if current user, show on right side
+        //TODO: if not current user, show on left side
+        //TODO: if current user, do not show username
+        //TODO: if not current user, show username
+        //TODO: if previous message is from same user, do not show username
+        <div
+          key={i}
+          className="chat-log-entry"
+          style={{
+            boxShadow: '0px 0px 1px 1px gray',
+            borderRadius: '4px',
+            padding: '4px 8px',
+            background: '#deffde',
+            position: 'relative',
+          }}
+        >
+          <div
+            className="username"
+            style={{ fontWeight: 'bold', color: '#5a4cff' }}
+          >
+            {log.username}
+          </div>
+          <div className="msg-body">
+            {log.statusMessage}
+            <div
+              className="timestamp"
+              style={{
+                fontSize: '10px',
+                position: 'absolute',
+                bottom: '2px',
+                right: '6px',
+                float: 'right',
+                clear: 'right',
+              }}
+            >
+              {log.createdAt.toLocaleTimeString('sv', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export const ChatLogObserver = observer(ChatLog);
 
 export const ZoneDrawer = ({
   title,
