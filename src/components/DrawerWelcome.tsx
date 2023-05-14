@@ -22,7 +22,7 @@ import { useState } from 'react';
 import { MapStore } from '../store/mapStore';
 import { runInAction } from 'mobx';
 import { ZoneLocation, createZone } from '../store/zoneStore';
-import { members as fakeMembers } from '../testData';
+import { currentUser, members as fakeMembers } from '../testData';
 
 const DrawerWelcome = ({
   map,
@@ -222,6 +222,7 @@ const provideZoneFetchOptions = (location?: ZoneLocation) => {
   return {
     method: 'POST',
     body: JSON.stringify({
+      userId: currentUser.userId,
       location,
     }),
     headers: {
