@@ -124,29 +124,49 @@ export class MapStore {
 
       this.watchId = navigator.geolocation.watchPosition(
         (position) => {
+          if (this.myLocation) {
+            runInAction(() => {
+              console.log('incrementing my location');
+              this.myLocation = new google.maps.LatLng(
+                this.myLocation!.lat() + 0.10002,
+                this.myLocation!.lng() + 0.10002
+              );
+            });
+            return;
+          }
+
           const location = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
           };
+
           const newLocation = new google.maps.LatLng(
             location.lat,
             location.lng
           );
-          if (!hasMoved(this.myLocation, newLocation)) {
-            console.log('No need to update location as it has not changed');
-            cancelLoading(this);
-            return;
-          }
+          //TODO: uncomment this to prevent unnecessary updates:
+          // if (!hasMoved(this.myLocation, newLocation)) {
+          //   console.log('No need to update location as it has not changed');
+
+          //   cancelLoading(this);
+          //   return;
+          // }
 
           runInAction(() => {
             this.myLocation = newLocation;
           });
 
-          //TODO: trigger pusher event to update location
+          //pusher event gets triggered in a useEffect
         },
         (error) => {
           console.error(error.message);
           cancelLoading(this);
+        },
+        {
+          enableHighAccuracy: true,
+          //receive position updates at approx 1 sec intervals:
+          timeout: 1000,
+          maximumAge: 0,
         }
       );
     }
