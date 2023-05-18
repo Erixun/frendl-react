@@ -2,6 +2,7 @@ import { makeAutoObservable, runInAction } from 'mobx';
 import { MapStore } from './mapStore';
 
 export const ZoneMenuOption = {
+  ZONE_CODE: 'ZONE_CODE',
   MEMBERS: 'MEMBERS',
   LOGS: 'LOGS',
   STATUS: 'STATUS',
