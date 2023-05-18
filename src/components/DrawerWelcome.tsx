@@ -15,14 +15,13 @@ import {
   HStack,
   VStack,
   Container,
-  Alert,
-  AlertIcon,
 } from '@chakra-ui/react';
-import { useState } from 'react';
+import { SetStateAction, useState } from 'react';
 import { MapStore } from '../store/mapStore';
 import { runInAction } from 'mobx';
-import { ZoneLocation, createZone } from '../store/zoneStore';
-import { currentUser, members as fakeMembers } from '../testData';
+import { Zone, createZone } from '../store/zoneStore';
+import AlertZone from './AlertZone';
+import { postToCreateZone, postToEnterZone } from '../service/ws';
 
 const DrawerWelcome = ({
   map,
@@ -41,35 +40,35 @@ const DrawerWelcome = ({
   const [errorCreateZone, setErrorCreateZone] = useState('');
   const [successCreateZone, setSuccessCreateZone] = useState('');
 
+  const handleZoneError =
+    (setError: (value: SetStateAction<string>) => void, action: string) =>
+    (err: Error) => {
+      setError(`Unable to ${action} Zone`);
+      setTimeout(() => {
+        setError('');
+      }, 3000);
+      console.log(err);
+    };
+
+    const initZone = (data: Zone) => {
+      runInAction(() => {
+        map.zone = createZone(map, data);
+        map.zoneId = data.zoneId;
+      });
+    };
+
   const onClickToEnter = () => {
-    console.log('onClickToEnter');
     setIsAboutToEnter(true);
-    fetch(
-      `http://localhost:3000/api/zone/${zoneCode}/enter`,
-      provideZoneFetchOptions(map.userLocation)
-    )
-      .then((response) => {
-        return response.json();
-      })
+    postToEnterZone(zoneCode)
       .then((data) => {
-        console.log(data);
-        runInAction(() => {
-          map.zone = createZone(map, data);
-          map.zoneId = data.zoneId;
-        });
+        initZone(data);
         setSuccessEnterZone(`Request approved! Entering Zone...`);
         setTimeout(() => {
           onClose();
           setSuccessEnterZone('');
         }, 2000);
       })
-      .catch((error) => {
-        setErrorEnterZone('Could not enter that Zone');
-        setTimeout(() => {
-          setErrorEnterZone('');
-        }, 3000);
-        console.log(error);
-      })
+      .catch(handleZoneError(setErrorEnterZone, 'enter'))
       .finally(() => {
         setIsAboutToEnter(false);
       });
@@ -77,44 +76,16 @@ const DrawerWelcome = ({
 
   const onClickToCreate = () => {
     setIsAboutToCreate(true);
-    fetch(
-      'http://localhost:3000/api/zone',
-      provideZoneFetchOptions(map.userLocation)
-    )
-      .then((response) => {
-        return response.json();
-      })
+    postToCreateZone()
       .then((data) => {
-        console.log(data);
-        runInAction(() => {
-          map.zone = createZone(map, data);
-          map.zoneId = data.zoneId;
-          // const members = data.members || fakeMembers;
-          // //create a google maps marker for each member location
-          // members.forEach((member: any) => {
-          //   const marker = new google.maps.Marker({
-          //     position: member.location,
-          //     map: map.map,
-          //     title: member.username,
-          //   });
-          //   map.markers.push(marker);
-          // });
-          // map.placeMarkers();
-          // map.addInfoWindowToMarkers();
-        });
+        initZone(data);
         setSuccessCreateZone('Zone created! Entering now...');
         setTimeout(() => {
           onClose();
           setSuccessCreateZone('');
         }, 2000);
       })
-      .catch((error) => {
-        setErrorCreateZone('Unable to create Zone');
-        setTimeout(() => {
-          setErrorCreateZone('');
-        }, 3000);
-        console.log(error);
-      })
+      .catch(handleZoneError(setErrorCreateZone, 'create'))
       .finally(() => {
         setIsAboutToCreate(false);
       });
@@ -125,7 +96,7 @@ const DrawerWelcome = ({
   };
 
   /**
-   * Validate zone code as consisting of 7 alphanumeric characters
+   * Validate zone code as consisting of 7 alphanumeric characters.
    */
   const isValidZoneCode = () => {
     return /^[A-Z0-9]{7}$/.test(zoneCode);
@@ -142,7 +113,10 @@ const DrawerWelcome = ({
       <DrawerOverlay>
         <DrawerContent>
           <Container centerContent minH={'full'}>
-            <DrawerHeader fontSize={30}>Welcome to Frendl</DrawerHeader>
+            <DrawerHeader fontSize={30} textAlign={'center'}>
+              <h1 style={{ fontSize: 'inherit' }}>Welcome to Frendl</h1>
+              <em style={{ fontSize: '0.5em' }}>Where friends come to zone</em>
+            </DrawerHeader>
             <DrawerBody position={'relative'} display={'flex'}>
               <VStack gap={5} position={'relative'} margin={'auto'}>
                 <div
@@ -154,29 +128,23 @@ const DrawerWelcome = ({
                   }}
                 >
                   {errorEnterZone && (
-                    <Alert status="error">
-                      <AlertIcon />
-                      {errorEnterZone}
-                    </Alert>
+                    <AlertZone message={errorEnterZone} status={'error'} />
                   )}
                   {successEnterZone && (
-                    <Alert status="success">
-                      <AlertIcon />
-                      {successEnterZone}
-                    </Alert>
+                    <AlertZone message={successEnterZone} status={'success'} />
                   )}
                 </div>
                 <FormControl>
                   <FormLabel fontWeight={'bold'}>Enter a Zone</FormLabel>
                   <HStack>
                     <Input
-                      placeholder="Zone Code, e.g. X7YBF32"
+                      placeholder="E.g. X7YBF32"
                       maxLength={7}
                       value={zoneCode}
                       onChange={handleZoneCode}
                     />
                     <Button
-                      isDisabled={!isValidZoneCode()}
+                      isDisabled={!isValidZoneCode() || Boolean(successEnterZone)}
                       isLoading={isAboutToEnter}
                       onClick={onClickToEnter}
                       colorScheme="teal"
@@ -190,24 +158,27 @@ const DrawerWelcome = ({
                 <p>OR</p>
                 <Button
                   isLoading={isAboutToCreate}
+                  isDisabled={Boolean(successCreateZone)}
                   loadingText={'Creating Zone...'}
                   onClick={onClickToCreate}
                   colorScheme="blue"
                   width={'180px'}
                 >
-                  Create your own
+                  {successCreateZone? 'Success!' : 'Create your own'}
                 </Button>
                 {errorCreateZone && (
-                  <Alert status="error" position={'absolute'} top={'105%'}>
-                    <AlertIcon />
-                    {errorCreateZone}
-                  </Alert>
+                  <AlertZone
+                    message={errorCreateZone}
+                    status={'error'}
+                    style={{ position: 'absolute', top: '105%' }}
+                  />
                 )}
                 {successCreateZone && (
-                  <Alert status="success" position={'absolute'} top={'105%'}>
-                    <AlertIcon />
-                    {successCreateZone}
-                  </Alert>
+                  <AlertZone
+                    message={successCreateZone}
+                    status={'success'}
+                    style={{ position: 'absolute', top: '105%' }}
+                  />
                 )}
               </VStack>
             </DrawerBody>
@@ -216,19 +187,6 @@ const DrawerWelcome = ({
       </DrawerOverlay>
     </Drawer>
   );
-};
-
-const provideZoneFetchOptions = (location?: ZoneLocation) => {
-  return {
-    method: 'POST',
-    body: JSON.stringify({
-      userId: currentUser.userId,
-      location,
-    }),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  };
 };
 
 export default DrawerWelcome;
