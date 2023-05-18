@@ -11,21 +11,28 @@ import {
   List,
   ListIcon,
   ListItem,
+  Popover,
+  PopoverArrow,
+  PopoverBody,
+  PopoverContent,
+  PopoverTrigger,
+  Portal,
 } from '@chakra-ui/react';
 import { IoPeople, IoPersonCircle } from 'react-icons/io5';
 import { AiOutlineNotification } from 'react-icons/ai';
-import { BiLogOutCircle, BiTargetLock } from 'react-icons/bi';
+import { BiCopy, BiHash, BiLogOutCircle, BiTargetLock } from 'react-icons/bi';
 import { TfiTarget } from 'react-icons/tfi';
 import { BsJournalText } from 'react-icons/bs';
 import { IconButton, SlideFade, VStack, useDisclosure } from '@chakra-ui/react';
 import { observer } from 'mobx-react-lite';
 import { MapStore } from '../store/mapStore';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
 import { ZoneMember, ZoneMenuOption, ZoneStore } from '../store/zoneStore';
 import { currentUser, members } from '../testData';
 import { runInAction } from 'mobx';
 import pusherClient from '../service/pusher';
+import { postToUpdateLocation } from '../service/ws';
 import 'react-toastify/dist/ReactToastify.css';
 import './GridMapOverlay.css';
 
@@ -51,8 +58,6 @@ const GridMapOverlay = observer(
 
       setStatus('');
     };
-
-
 
     useEffect(() => {
       console.log('useEffect map.zoneId', map.zoneId);
@@ -100,27 +105,8 @@ const GridMapOverlay = observer(
 
     useEffect(() => {
       console.log('myLocation changed');
-      fetch('http://localhost:3000/api/update-location', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          //TODO: user zoneStore instead?
-          zoneId: map.zone?.zoneId,
-          userId: map.currentUser.userId,
-          username: map.currentUser.username,
-          location: map.userLocation,
-        }),
-      }).then((res) => {
-        if (res.status === 200) {
-          console.log('new location updated successfully');
-        }
-      });
+      postToUpdateLocation();
     }, [map.myLocation]);
-
-    //TODO: determine if this is needed
-    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
     const toggleZoneDrawer = (menuOption: string) => () => {
       runInAction(() => {
@@ -128,8 +114,6 @@ const GridMapOverlay = observer(
         if (zone) {
           const isToggledOption = zone.toggledMenuOption === menuOption;
           zone.toggledMenuOption = isToggledOption ? '' : menuOption;
-          const isOpen = zone.isDrawerOpen;
-          setIsDrawerOpen(isOpen);
         }
       });
       setCanSubmitStatus(false);
@@ -137,7 +121,6 @@ const GridMapOverlay = observer(
 
     const closeZoneDrawer = () => {
       if (map.zone) map.zone.toggledMenuOption = ZoneMenuOption.NONE;
-      setIsDrawerOpen(false);
     };
 
     const showLocation = (member: ZoneMember) => {
@@ -208,7 +191,27 @@ const GridMapOverlay = observer(
       return map.zone?.toggledMenuOption === option;
     };
 
-    const { MEMBERS, LOGS, STATUS, LOCATE, NONE } = ZoneMenuOption;
+    const { ZONE_CODE, MEMBERS, LOGS, STATUS, LOCATE, NONE } = ZoneMenuOption;
+
+    const toggleZoneCode = () => {
+      runInAction(() => {
+        const { zone } = map;
+        if (zone) {
+          const isToggledOption = zone.toggledMenuOption === ZONE_CODE;
+          zone.toggledMenuOption = isToggledOption ? '' : ZONE_CODE;
+        }
+      });
+    };
+
+    const copyZoneCode = () => {
+      const { zoneId } = map.zone!;
+      //copy zone code to clipBoard
+      navigator.clipboard.writeText(zoneId);
+      notify('Code Copied to Clipboard');
+      btnZoneCodeRef.current?.click();
+    };
+
+    const btnZoneCodeRef = useRef<HTMLButtonElement>(null);
 
     return (
       <div className="grid-map-overlay">
@@ -226,6 +229,44 @@ const GridMapOverlay = observer(
         />
         <SlideFade in={isOpen} offsetY="20px" style={{ gridArea: 'menu' }}>
           <VStack>
+            {/* TODO: separate component */}
+            <Popover placement="left-start">
+              <PopoverTrigger>
+                <IconButton
+                  ref={btnZoneCodeRef}
+                  colorScheme="teal"
+                  aria-label="Copy Zone Code"
+                  isActive={isOptionToggled(ZONE_CODE)}
+                  onClick={toggleZoneCode}
+                  size="lg"
+                  marginTop={'10px'}
+                  icon={<Icon as={BiHash} boxSize={7} />}
+                />
+              </PopoverTrigger>
+              <Portal>
+                <PopoverContent width={'max-content'}>
+                  <PopoverArrow />
+                  <PopoverBody
+                    style={{
+                      display: 'flex',
+                      gap: '5px',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <div>
+                      <strong>Zone Code:</strong> {map.zone?.zoneId}
+                    </div>
+                    <IconButton
+                      style={{ backgroundColor: 'transparent', border: 'none' }}
+                      aria-label="Copy Zone Code"
+                      size="sm"
+                      onClick={copyZoneCode}
+                      icon={<Icon as={BiCopy} boxSize={7} />}
+                    />
+                  </PopoverBody>
+                </PopoverContent>
+              </Portal>
+            </Popover>
             <IconButton
               colorScheme="teal"
               aria-label="Toggle Members"
@@ -254,7 +295,6 @@ const GridMapOverlay = observer(
 
                   map.zone.toggledMenuOption = STATUS;
                 });
-                setIsDrawerOpen(false);
               }}
               isActive={isOptionToggled(STATUS)}
               colorScheme="teal"
@@ -334,7 +374,7 @@ const GridMapOverlay = observer(
     );
   }
 );
-
+//TODO: move to separate file
 export const ChatLog = ({ zone }: { zone?: ZoneStore }) => {
   if (!zone) return null;
 
@@ -408,9 +448,9 @@ export const ChatLog = ({ zone }: { zone?: ZoneStore }) => {
     </div>
   );
 };
-
+//TODO: move to separate file
 export const ChatLogObserver = observer(ChatLog);
-
+//TODO: move to separate file
 export const ZoneDrawer = ({
   title,
   isOpen,
@@ -451,6 +491,7 @@ export const ZoneDrawer = ({
   );
 };
 
+//TODO: move to own file
 const ZoneMemberItem = ({
   member,
   currentTarget,
@@ -499,8 +540,8 @@ function isLandscape() {
   return doc.scrollWidth > doc.scrollHeight;
 }
 
-export const notify = () => {
-  return toast(`User Malva entered the zone`, {
+export const notify = (msg: string) => {
+  return toast(msg, {
     position: 'bottom-right',
     autoClose: 2000,
     hideProgressBar: false,
