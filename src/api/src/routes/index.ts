@@ -25,13 +25,11 @@ router.post('/pusher/auth', (req, res) => {
 });
 
 router.post('/update-location', (req, res) => {
-  const { zoneId, userId, username, location } = req.body;
-  console.log('/update-location', req.body);
-  // trigger a new post event via pusher
+  const { zoneId, userId, location } = req.body;
+
   pusher
     .trigger(`zone-channel-${zoneId}`, 'location-update', {
       userId: userId,
-      username: username,
       location: location,
     })
     .then(() => {
