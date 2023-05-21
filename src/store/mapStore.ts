@@ -1,7 +1,8 @@
 import { Loader } from '@googlemaps/js-api-loader';
-import { makeAutoObservable, runInAction } from 'mobx';
+import { makeAutoObservable, runInAction, reaction } from 'mobx';
 import { Channel } from 'pusher-js';
 import { ZoneMember, ZoneStore } from './zoneStore';
+import pusherClient from '../service/pusher';
 
 export class MapStore {
   map: google.maps.Map | undefined;
@@ -14,6 +15,7 @@ export class MapStore {
   currentUserStatus = '';
   zone: ZoneStore | undefined;
   zoneId: string | undefined;
+  prevZoneId: string | undefined;
   zoneChannel: Channel | undefined;
   watchId: number | undefined;
   markers: google.maps.Marker[] = [];
@@ -22,6 +24,14 @@ export class MapStore {
     this.currentUser = currentUser;
     makeAutoObservable(this);
     this.startMap();
+    reaction(
+      () => this.zoneId,
+      (zoneId) => {
+        if (!zoneId) return;
+        // this.clearZone();
+        this.initZone();
+      }
+    );
   }
 
   get userLocation() {
@@ -46,6 +56,51 @@ export class MapStore {
     this.map.panTo(bounds.getCenter());
   }
 
+  initZone() {
+    this.displayMemberLocations();
+    pusherClient.unsubscribe(`zone-channel-${this.prevZoneId}`);
+
+    this.zoneChannel = pusherClient.subscribe(`zone-channel-${this.zoneId}`);
+
+    this.zoneChannel.bind('pusher:subscription_succeeded', () => {
+      console.log('pusher:subscription_succeeded');
+      runInAction(() => {
+        this.prevZoneId = this.zoneId;
+      });
+    });
+
+    this.zoneChannel.bind('location-update', (body: any) => {
+      const { userId, location } = body;
+
+      this.zone?.updateLocation(userId, location);
+    });
+
+    this.zoneChannel.bind('chat-log-update', (body: any) => {
+      const { userId, entry } = body;
+
+      console.log('chat-log-update entry', entry);
+      this.zone?.appendChatLog(entry);
+      this.displayMessage(entry.message, userId);
+    });
+
+    //TODO: implement this
+    this.zoneChannel.bind('member_added', (body: any) => {
+      console.log('member_added', body);
+      // notify(state);
+    });
+    // map.zoneChannel.bind('pusher:member_removed', (member) => {
+    //   this.setState((prevState, props) => {
+    //     const newState = { ...prevState };
+    //     // remove member location once they go offline
+    //     delete newState.locations[`${member.id}`];
+    //     // delete member from the list of online users
+    //     delete newState.users_online[`${member.id}`];
+    //     return newState;
+    //   });
+    //   notify(state);
+    // });
+  }
+
   clearZone() {
     runInAction(() => {
       if (!this.zone) return;
@@ -66,6 +121,7 @@ export class MapStore {
     this.markers.forEach((marker) => {
       const infoWindow = new google.maps.InfoWindow({
         content: `<b>${marker.getTitle()}</b>` || 'Unknown',
+        maxWidth: 300,
       });
 
       const window = { isOpen: false };
@@ -95,19 +151,16 @@ export class MapStore {
     });
   }
 
-  displayStatus(status: string) {
-    if (!status) {
-      this.currentUserStatus = '';
-      console.error('No status provided');
-    }
-    this.currentUserStatus = `<p>${status}</p>`;
-    const my = this.zone?.members.find(
-      (member) => member.username === this.currentUser.username
-    );
-    if (!my) return console.error('No member found for current user');
+  displayMessage(message: string, userId = this.currentUser.userId) {
+    const user = this.zone?.members.find((member) => member.userId === userId);
+    if (!user) return console.error('No user found for id', userId);
+    const content = `<b>${user.username}</b><br>${message}`;
+    const infoWindow = user.infoWindow;
+    if (!infoWindow) return console.error('No infoWindow found for user', user);
 
-    const content = `<b>${my.username}</b><br>${status}`;
-    my.infoWindow?.setContent(content);
+    infoWindow.setContent(content);
+    infoWindow.setOptions({ maxWidth: 300 });
+    infoWindow.open(this.map, user.marker);
   }
 
   findMyLocation() {
@@ -155,8 +208,6 @@ export class MapStore {
           runInAction(() => {
             this.myLocation = newLocation;
           });
-
-          //pusher event gets triggered in a useEffect
         },
         (error) => {
           console.error(error.message);
