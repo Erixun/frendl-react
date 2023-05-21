@@ -1,16 +1,7 @@
 import { CloseIcon, HamburgerIcon } from '@chakra-ui/icons';
 import {
   Button,
-  Drawer,
-  DrawerBody,
-  DrawerCloseButton,
-  DrawerContent,
-  DrawerFooter,
-  DrawerHeader,
   Icon,
-  List,
-  ListIcon,
-  ListItem,
   Popover,
   PopoverArrow,
   PopoverBody,
@@ -18,21 +9,25 @@ import {
   PopoverTrigger,
   Portal,
 } from '@chakra-ui/react';
-import { IoPeople, IoPersonCircle } from 'react-icons/io5';
+import { IoPeople } from 'react-icons/io5';
 import { AiOutlineNotification } from 'react-icons/ai';
 import { BiCopy, BiHash, BiLogOutCircle, BiTargetLock } from 'react-icons/bi';
-import { TfiTarget } from 'react-icons/tfi';
 import { BsJournalText } from 'react-icons/bs';
 import { IconButton, SlideFade, VStack, useDisclosure } from '@chakra-ui/react';
 import { observer } from 'mobx-react-lite';
 import { MapStore } from '../store/mapStore';
-import { useEffect, useRef, useState } from 'react';
-import { toast, ToastContainer } from 'react-toastify';
-import { ZoneMember, ZoneMenuOption, ZoneStore } from '../store/zoneStore';
+import { ChangeEvent, useEffect, useRef, useState } from 'react';
+import { ToastContainer } from 'react-toastify';
+import { ZoneMember, ZoneMenuOption } from '../store/zoneStore';
 import { currentUser, members } from '../testData';
-import { runInAction } from 'mobx';
-import pusherClient from '../service/pusher';
+import { runInAction, set } from 'mobx';
 import { postToUpdateLocation } from '../service/ws';
+import { ChatLogObserver } from './ChatLog';
+import ZoneDrawer from './ZoneDrawer';
+import ZoneMemberItem from './ZoneMemberItem';
+import { notify } from '../utils';
+import { KeyboardEvent } from 'react';
+import ZoneMessenger from './ZoneMessenger';
 import 'react-toastify/dist/ReactToastify.css';
 import './GridMapOverlay.css';
 
@@ -48,65 +43,19 @@ const GridMapOverlay = observer(
 
     const [canSubmitStatus, setCanSubmitStatus] = useState(false);
 
-    const [status, setStatus] = useState('');
+    const [message, setMessage] = useState('');
     const submitStatus = (e: any) => {
       e.preventDefault();
       console.log('submitStatus');
-      console.log(status);
-      map.displayStatus(status);
-      if (status) map.zone?.makeLogEntry(currentUser.username, status);
+      const message = e.target.message.value;
+      console.log(message)
+      map.displayMessage(message);
+      if (message) map.zone?.makeLogEntry(currentUser.username, message);
 
-      setStatus('');
+      setMessage('');
     };
 
-    useEffect(() => {
-      console.log('useEffect map.zoneId', map.zoneId);
-      console.log(
-        'Pusher subscription & channel binds commented out to prevent reaching quota'
-      );
-
-      if (!map.zoneId) return exitZone();
-
-      //set map zoom level and center so that all markers are visible
-      map.displayMemberLocations();
-
-      map.zoneChannel = pusherClient.subscribe(`zone-channel-${map.zoneId}`);
-
-      map.zoneChannel.bind('pusher:subscription_succeeded', () => {
-        console.log('pusher:subscription_succeeded');
-      });
-
-      map.zoneChannel.bind('location-update', (body: any) => {
-        //TODO: update ZoneStore
-        console.log('location-update');
-        console.log(body);
-
-        const { userId, location } = body;
-
-        map.zone?.updateLocation(userId, location);
-      });
-
-      // map.zoneChannel.bind('pusher:member_removed', (member) => {
-      //   this.setState((prevState, props) => {
-      //     const newState = { ...prevState };
-      //     // remove member location once they go offline
-      //     delete newState.locations[`${member.id}`];
-      //     // delete member from the list of online users
-      //     delete newState.users_online[`${member.id}`];
-      //     return newState;
-      //   });
-      //   notify(state);
-      // });
-
-      // map.zoneChannel.bind('pusher:member_added', (member) => {
-      //   notify(state);
-      // });
-    }, [map.zoneId]);
-
-    useEffect(() => {
-      console.log('myLocation changed');
-      postToUpdateLocation();
-    }, [map.myLocation]);
+    useEffect(postToUpdateLocation, [map.myLocation]);
 
     const toggleZoneDrawer = (menuOption: string) => () => {
       runInAction(() => {
@@ -199,13 +148,13 @@ const GridMapOverlay = observer(
         if (zone) {
           const isToggledOption = zone.toggledMenuOption === ZONE_CODE;
           zone.toggledMenuOption = isToggledOption ? '' : ZONE_CODE;
+          setCanSubmitStatus(false);
         }
       });
     };
 
     const copyZoneCode = () => {
       const { zoneId } = map.zone!;
-      //copy zone code to clipBoard
       navigator.clipboard.writeText(zoneId);
       notify('Code Copied to Clipboard');
       btnZoneCodeRef.current?.click();
@@ -213,6 +162,19 @@ const GridMapOverlay = observer(
 
     const btnZoneCodeRef = useRef<HTMLButtonElement>(null);
 
+    const dismissOnEsc = (e: KeyboardEvent<HTMLFormElement>) => {
+      if (e.key === 'Escape') {
+        setCanSubmitStatus(false);
+        runInAction(() => {
+          if (map.zone) map.zone.toggledMenuOption = NONE;
+        });
+      }
+    };
+
+    const changeMessage = (e: ChangeEvent<HTMLInputElement>) => {
+      const { value } = e.target;
+      setMessage(value);
+    };
     return (
       <div className="grid-map-overlay">
         <ToastContainer />
@@ -244,7 +206,7 @@ const GridMapOverlay = observer(
                 />
               </PopoverTrigger>
               <Portal>
-                <PopoverContent width={'max-content'}>
+                <PopoverContent width={'max-content'} borderWidth={0}>
                   <PopoverArrow />
                   <PopoverBody
                     style={{
@@ -332,24 +294,7 @@ const GridMapOverlay = observer(
             pointerEvents: 'none',
           }}
         >
-          {/* TODO: Create component */}
-          <div className="status-messenger">
-            <form onSubmit={submitStatus}>
-              <div className="input-wrapper">
-                <input
-                  autoFocus
-                  className="input-status"
-                  type="text"
-                  placeholder="Enter a message..."
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                />
-                <Button type={'submit'} colorScheme="blue" size={'sm'}>
-                  Submit
-                </Button>
-              </div>
-            </form>
-          </div>
+          <ZoneMessenger value={message} handleChange={changeMessage} submitStatus={submitStatus} dismissOnEsc={dismissOnEsc}  />
         </SlideFade>
 
         <ZoneDrawer
@@ -374,182 +319,5 @@ const GridMapOverlay = observer(
     );
   }
 );
-//TODO: move to separate file
-export const ChatLog = ({ zone }: { zone?: ZoneStore }) => {
-  if (!zone) return null;
-
-  useEffect(() => {
-    console.log('ChatLog mounted');
-    const chatLog = document.getElementById('chat-log');
-    chatLog?.scrollIntoView({ behavior: 'auto', block: 'end' });
-  }, [zone.statusLogs]);
-
-  if (!zone.statusLogs.length)
-    return (
-      <p style={{ textAlign: 'center', fontStyle: 'italic' }}>
-        No messages yet
-      </p>
-    );
-
-  return (
-    <div
-      id="chat-log"
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '100%',
-        gap: '1rem',
-        fontSize: '1rem',
-      }}
-    >
-      {zone.statusLogs.map((log, i, arr) => (
-        //TODO: if current user, show on right side
-        //TODO: if not current user, show on left side
-        //TODO: if current user, do not show username
-        //TODO: if not current user, show username
-        //TODO: if previous message is from same user, do not show username
-        <div
-          key={i}
-          className="chat-log-entry"
-          style={{
-            boxShadow: '0px 0px 1px 1px gray',
-            borderRadius: '4px',
-            padding: '4px 8px',
-            background: '#deffde',
-            position: 'relative',
-          }}
-        >
-          <div
-            className="username"
-            style={{ fontWeight: 'bold', color: '#5a4cff' }}
-          >
-            {log.username}
-          </div>
-          <div className="msg-body">
-            {log.statusMessage}
-            <div
-              className="timestamp"
-              style={{
-                fontSize: '10px',
-                position: 'absolute',
-                bottom: '2px',
-                right: '6px',
-                float: 'right',
-                clear: 'right',
-              }}
-            >
-              {log.createdAt.toLocaleTimeString('sv', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
-//TODO: move to separate file
-export const ChatLogObserver = observer(ChatLog);
-//TODO: move to separate file
-export const ZoneDrawer = ({
-  title,
-  isOpen,
-  onClose,
-  children,
-}: {
-  title: string;
-  isOpen: boolean;
-  onClose: () => void;
-  children: React.ReactNode;
-}) => {
-  return (
-    <Drawer
-      isOpen={isOpen}
-      placement="left"
-      onClose={onClose}
-      isFullHeight={false}
-      size={isLandscape() ? 'xs' : 'sm'}
-      closeOnOverlayClick={false}
-    >
-      <DrawerContent className="zone-drawer-content">
-        <DrawerCloseButton />
-        <DrawerHeader>{title}</DrawerHeader>
-
-        <DrawerBody>
-          <List spacing={3} paddingLeft={'0'} fontSize={'1.2rem'}>
-            {children}
-          </List>
-        </DrawerBody>
-
-        <DrawerFooter>
-          <Button variant="outline" mr={3} onClick={onClose}>
-            Close
-          </Button>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
-  );
-};
-
-//TODO: move to own file
-const ZoneMemberItem = ({
-  member,
-  currentTarget,
-  onLockTarget,
-  onShowLocation,
-}: {
-  member: any;
-  currentTarget: string;
-  onLockTarget: (member: any) => () => void;
-  onShowLocation: (member: any) => () => void;
-}) => {
-  return (
-    <ListItem className="zone-member" onClick={onShowLocation(member)}>
-      <IconButton
-        sx={{
-          '&:hover': { color: 'red' },
-          backgroundColor: 'transparent',
-          border: 'none',
-          outline: 'none',
-          boxShadow: 'none',
-          padding: '0',
-        }}
-        aria-label="Target"
-        onClick={onLockTarget(member)}
-        icon={
-          currentTarget === member.username ? (
-            <BiTargetLock size={20} />
-          ) : (
-            <TfiTarget />
-          )
-        }
-      />
-
-      <ListIcon
-        className="person-circle"
-        as={IoPersonCircle}
-        color={member.status === 'online' ? 'green.500' : 'grey'}
-      />
-      <span className="name">{member.username}</span>
-    </ListItem>
-  );
-};
-
-function isLandscape() {
-  const doc = document.documentElement;
-  return doc.scrollWidth > doc.scrollHeight;
-}
-
-export const notify = (msg: string) => {
-  return toast(msg, {
-    position: 'bottom-right',
-    autoClose: 2000,
-    hideProgressBar: false,
-    closeOnClick: true,
-    pauseOnHover: true,
-    draggable: true,
-    type: 'success',
-  });
-};
 
 export default GridMapOverlay;
