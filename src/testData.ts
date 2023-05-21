@@ -4,7 +4,7 @@ const currentUser = {
   userId: '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed',
   username: 'Erik Emanuel',
   status: 'online',
-  statusMessage: '',
+  message: '',
   location: {
     lat: 59.35,
     lng: 18.04,
