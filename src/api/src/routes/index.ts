@@ -60,4 +60,23 @@ router.post('/update-chat-log', (req, res) => {
     });
 });
 
+router.post('/add-zone-member', (req, res) => {
+  const { zoneId, userId, user } = req.body;
+  console.log(req.body);
+
+  pusher
+    .trigger(`zone-channel-${zoneId}`, 'member_added', {
+      userId: userId,
+      user: user,
+    })
+    .then(() => {
+      console.log('pusher.trigger success for member_added');
+      res.json({ status: 200 });
+    })
+    .catch((err) => {
+      console.log('pusher.trigger error', err);
+      res.json({ status: 500 });
+    });
+});
+
 export default router;
