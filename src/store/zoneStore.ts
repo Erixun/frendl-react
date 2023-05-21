@@ -1,5 +1,6 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import { MapStore } from './mapStore';
+import { postToUpdateChatLog } from '../service/ws';
 
 export const ZoneMenuOption = {
   ZONE_CODE: 'ZONE_CODE',
@@ -21,7 +22,8 @@ export class ZoneStore implements Zone {
   createdBy: string;
   members: ZoneMember[] = [];
   memberMap = new Map<string, ZoneMember>();
-  statusLogs: ZoneStatusLog[] = [];
+  chatLog: ZoneChatLogEntry[] = [];
+  chatLogLastEntry: ZoneChatLogEntry | undefined;
   focusedMember?: ZoneMember | null;
   focusIntervalId: NodeJS.Timeout | undefined;
 
@@ -38,7 +40,7 @@ export class ZoneStore implements Zone {
     this.updatedAt = zone.updatedAt;
     this.createdBy = zone.createdBy;
     this.members = zone.members;
-    this.statusLogs = zone.statusLogs || [];
+    this.chatLog = zone.chatLog || [];
 
     this.members.forEach((member) => {
       this.memberMap.set(member.userId, member);
@@ -51,7 +53,7 @@ export class ZoneStore implements Zone {
 
       member.marker = marker;
       const infoWindow = new google.maps.InfoWindow({
-        content: `<b>${member.username}</b><br>${member.statusMessage || ''}`,
+        content: `<b>${member.username}</b><br>${member.message || ''}`,
       });
 
       infoWindow.open(map.map, marker);
@@ -71,9 +73,9 @@ export class ZoneStore implements Zone {
     this.map.displayMemberLocations();
   }
 
-  //TODO: Method to mark member locations on the map
-
-  //TODO: Method to update a specific member
+  get currentUser() {
+    return this.map.currentUser;
+  }
 
   updateLocation(userId: string, location: ZoneLocation) {
     const validMember = this.memberMap.get(userId);
@@ -86,9 +88,7 @@ export class ZoneStore implements Zone {
     );
     if (validMember) {
       validMember.location = location;
-
       validMember.marker?.setPosition(location);
-
       validMember.infoWindow?.setPosition(location);
 
       this.memberMap.set(userId, validMember);
@@ -105,8 +105,7 @@ export class ZoneStore implements Zone {
   setFocus(member: ZoneMember | null) {
     clearInterval(this.focusIntervalId);
     this.focusedMember = member;
-    // this.toggledMenuOption = ZoneMenuOption.LOCATE;
-    //Continuously show the location of the focused member
+
     if (!member) return console.log('no member in focus');
     runInAction(() => {
       this.focusIntervalId = setInterval(() => {
@@ -142,15 +141,22 @@ export class ZoneStore implements Zone {
     this._toggledMenuOption = option;
   }
 
-  makeLogEntry(username: string, statusMessage: string) {
-    //TODO: also post to server (using pusher?)
-    this.statusLogs.push({
-      username,
-      statusMessage,
-      createdAt: new Date(),
+  appendChatLog(entry: ZoneChatLogEntry) {
+    runInAction(() => {
+      this.chatLog = [...this.chatLog, entry];
+      this.chatLogLastEntry = entry;
     });
+  }
 
-    console.log('statusLogs', this.statusLogs);
+  makeLogEntry(username: string, message: string) {
+    const entry = {
+      userId: this.currentUser?.userId,
+      username,
+      message,
+      createdAt: new Date(),
+    };
+
+    postToUpdateChatLog(this.zoneId, entry);
   }
 }
 
@@ -166,20 +172,21 @@ export interface Zone {
   createdBy: string;
   members: ZoneMember[];
   memberMap?: Map<string, ZoneMember>;
-  statusLogs: ZoneStatusLog[];
+  chatLog: ZoneChatLogEntry[];
 }
 
-export interface ZoneStatusLog {
+export interface ZoneChatLogEntry {
+  userId?: string;
   username: string;
-  statusMessage: string;
+  message: string;
   createdAt: Date;
 }
 
 export interface ZoneMember {
   userId: string;
   username: string;
-  status: string;
-  statusMessage: string;
+  status?: string;
+  message?: string;
   location: ZoneLocation;
   marker?: google.maps.Marker;
   infoWindow?: google.maps.InfoWindow;
