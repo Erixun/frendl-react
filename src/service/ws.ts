@@ -1,5 +1,6 @@
 import { useMapStore } from '../hooks/useMapStore';
 import { MapStore } from '../store/mapStore';
+import { ZoneChatLogEntry } from '../store/zoneStore';
 
 const API_URL = import.meta.env.API_URL || 'http://localhost:3000/api';
 const ZONE_API_URL = `${API_URL}/zone`;
@@ -8,16 +9,15 @@ export const postToEnterZone = (zoneCode: string) => {
   const map = useMapStore();
   return fetch(
     `${ZONE_API_URL}/${zoneCode}/enter`,
-    provideZoneFetchOptions(map)
+    provideInitZoneOptions(map)
   ).then(handleResponse);
 };
 
 export const postToCreateZone = () => {
   const map = useMapStore();
-  return fetch(ZONE_API_URL, provideZoneFetchOptions(map)).then(handleResponse);
+  return fetch(ZONE_API_URL, provideInitZoneOptions(map)).then(handleResponse);
 };
 
-//TODO: correct this
 export const postToUpdateLocation = () => {
   const map = useMapStore();
   fetch(`${API_URL}/update-location`, {
@@ -30,26 +30,52 @@ export const postToUpdateLocation = () => {
       userId: map.currentUser.userId,
       location: map.userLocation,
     }),
-  }).then((res) => {
-    if (res.status === 200) {
-      console.log('new location updated successfully');
-    }
-  });
+  })
+    .then((res) => {
+      if (res.status === 200) {
+        console.log('new location updated successfully');
+      }
+    })
+    .catch((err) => {
+      console.log(err);
+    });
 };
 
-//TODO: correct this
+//TODO: implement this
 // export const postToExitZone = () => {
 //   const map = useMapStore();
 //   return fetch(
 //     `${ZONE_API_URL}/${map.zoneId}/exit`,
-//     provideZoneFetchOptions(map)
+//     provideInitZoneOptions(map)
 //   ).then(handleResponse);
 // };
 
-//TODO: implement this
-// export const postToUpdateChatLog = (message: string) => {
+export const postToUpdateChatLog = (
+  zoneId: string,
+  entry: ZoneChatLogEntry
+) => {
+  fetch(`${API_URL}/update-chat-log`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      zoneId: zoneId,
+      userId: entry.userId,
+      entry: entry,
+    }),
+  })
+    .then((res) => {
+      if (res.status === 200) {
+        console.log('new chat log entry posted successfully');
+      }
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+};
 
-const provideZoneFetchOptions = (map: MapStore) => {
+const provideInitZoneOptions = (map: MapStore) => {
   return {
     method: 'POST',
     body: JSON.stringify({
