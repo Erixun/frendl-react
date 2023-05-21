@@ -42,4 +42,22 @@ router.post('/update-location', (req, res) => {
     });
 });
 
+router.post('/update-chat-log', (req, res) => {
+  const { zoneId, userId, entry } = req.body;
+
+  pusher
+    .trigger(`zone-channel-${zoneId}`, 'chat-log-update', {
+      userId: userId,
+      entry: entry,
+    })
+    .then(() => {
+      console.log('pusher.trigger success for chat-log-update');
+      res.json({ status: 200 });
+    })
+    .catch((err) => {
+      console.log('pusher.trigger error', err);
+      res.json({ status: 500 });
+    });
+});
+
 export default router;
