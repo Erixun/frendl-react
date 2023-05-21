@@ -5,7 +5,7 @@ import GridMapOverlay from './components/GridMapOverlay';
 import './App.css';
 import { useMapStore } from './hooks/useMapStore';
 
-const mapStore = useMapStore()//new MapStore(currentUser);
+const mapStore = useMapStore()
 mapStore.findMyLocation();
 const App = observer(() => {
   const { isOpen, onOpen, onClose } = useDisclosure({ defaultIsOpen: true });
