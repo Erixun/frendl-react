@@ -5,12 +5,30 @@ import { ZoneChatLogEntry } from '../store/zoneStore';
 const API_URL = import.meta.env.API_URL || 'http://localhost:3000/api';
 const ZONE_API_URL = `${API_URL}/zone`;
 
-export const postToEnterZone = (zoneCode: string) => {
+export const postToEnterZone = async (zoneCode: string) => {
   const map = useMapStore();
-  return fetch(
-    `${ZONE_API_URL}/${zoneCode}/enter`,
-    provideInitZoneOptions(map)
-  ).then(handleResponse);
+  const options = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      zoneId: zoneCode,
+      userId: map.currentUser.userId,
+      location: map.userLocation,
+    }),
+  };
+  const data = await fetch(`${API_URL}/add-zone-member`, options).then(
+    handleResponse
+  );
+
+  map.currentUser = data.user;
+
+  const zone = await fetch(`${ZONE_API_URL}/${zoneCode}`)
+    .then(handleResponse)
+    .catch((error) => console.log('error', error));
+
+  return zone;
 };
 
 export const postToCreateZone = () => {

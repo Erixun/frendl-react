@@ -22,6 +22,7 @@ import { runInAction } from 'mobx';
 import { Zone, createZone } from '../store/zoneStore';
 import AlertZone from './AlertZone';
 import { postToCreateZone, postToEnterZone } from '../service/ws';
+import isValidZoneCode from '../utils/isValidZoneCode';
 
 const DrawerWelcome = ({
   map,
@@ -95,13 +96,6 @@ const DrawerWelcome = ({
     setZoneCode(e.target.value.toUpperCase());
   };
 
-  /**
-   * Validate zone code as consisting of 7 alphanumeric characters.
-   */
-  const isValidZoneCode = () => {
-    return /^[A-Z0-9]{7}$/.test(zoneCode);
-  };
-
   return (
     <Drawer
       isFullHeight={true}
@@ -144,7 +138,7 @@ const DrawerWelcome = ({
                       onChange={handleZoneCode}
                     />
                     <Button
-                      isDisabled={!isValidZoneCode() || Boolean(successEnterZone)}
+                      isDisabled={!isValidZoneCode(zoneCode) || Boolean(successEnterZone)}
                       isLoading={isAboutToEnter}
                       onClick={onClickToEnter}
                       colorScheme="teal"

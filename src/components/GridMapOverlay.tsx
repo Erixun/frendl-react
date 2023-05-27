@@ -1,6 +1,5 @@
 import { CloseIcon, HamburgerIcon } from '@chakra-ui/icons';
 import {
-  Button,
   Icon,
   Popover,
   PopoverArrow,
@@ -19,8 +18,8 @@ import { MapStore } from '../store/mapStore';
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { ToastContainer } from 'react-toastify';
 import { ZoneMember, ZoneMenuOption } from '../store/zoneStore';
-import { currentUser, members } from '../testData';
-import { runInAction, set } from 'mobx';
+import { currentUser } from '../testData';
+import { runInAction } from 'mobx';
 import { postToUpdateLocation } from '../service/ws';
 import { ChatLogObserver } from './ChatLog';
 import ZoneDrawer from './ZoneDrawer';
@@ -48,7 +47,7 @@ const GridMapOverlay = observer(
       e.preventDefault();
       console.log('submitStatus');
       const message = e.target.message.value;
-      console.log(message)
+      console.log(message);
       map.displayMessage(message);
       if (message) map.zone?.makeLogEntry(currentUser.username, message);
 
@@ -133,7 +132,7 @@ const GridMapOverlay = observer(
     };
 
     const getMembers = () => {
-      return map.zone?.members || members;
+      return map.zone?.membersArray;
     };
 
     const isOptionToggled = (option: string) => {
@@ -175,6 +174,16 @@ const GridMapOverlay = observer(
       const { value } = e.target;
       setMessage(value);
     };
+
+    useEffect(() => {
+      notifyNewMember();
+    }, [map.zone?.latestMemberName]);
+
+    const notifyNewMember = async () => {
+      const latestMember = map.zone?.latestMemberName;
+      if (latestMember) notify(`${latestMember} entered the zone`);
+    };
+
     return (
       <div className="grid-map-overlay">
         <ToastContainer />
@@ -294,7 +303,12 @@ const GridMapOverlay = observer(
             pointerEvents: 'none',
           }}
         >
-          <ZoneMessenger value={message} handleChange={changeMessage} submitStatus={submitStatus} dismissOnEsc={dismissOnEsc}  />
+          <ZoneMessenger
+            value={message}
+            handleChange={changeMessage}
+            submitStatus={submitStatus}
+            dismissOnEsc={dismissOnEsc}
+          />
         </SlideFade>
 
         <ZoneDrawer
@@ -304,7 +318,7 @@ const GridMapOverlay = observer(
         >
           {isOptionToggled(MEMBERS) &&
             //TODO: <ZoneMembers />
-            getMembers().map((member, i) => (
+            getMembers()?.map((member, i) => (
               <ZoneMemberItem
                 key={i}
                 member={member}

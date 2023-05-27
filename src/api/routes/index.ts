@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import zoneRouter from './zoneRouter';
 import pusher from '../service/pusher';
+import { generateUser } from '../utils/generateUsername';
+import ZoneDB from '../ZoneDB';
 
 const router = Router();
 
@@ -52,6 +54,7 @@ router.post('/update-chat-log', (req, res) => {
     })
     .then(() => {
       console.log('pusher.trigger success for chat-log-update');
+      ZoneDB.get(zoneId)?.chatLog.push(entry);
       res.json({ status: 200 });
     })
     .catch((err) => {
@@ -61,17 +64,20 @@ router.post('/update-chat-log', (req, res) => {
 });
 
 router.post('/add-zone-member', (req, res) => {
-  const { zoneId, userId, user } = req.body;
-  console.log(req.body);
+  const { zoneId, location } = req.body;
+  const user = generateUser(location);
 
   pusher
     .trigger(`zone-channel-${zoneId}`, 'member_added', {
-      userId: userId,
+      userId: user.userId,
       user: user,
     })
     .then(() => {
       console.log('pusher.trigger success for member_added');
-      res.json({ status: 200 });
+      //TODO: add user to real db
+      // ZoneDB.addUserToZone(zoneId, user);
+      ZoneDB.get(zoneId)?.members.push(user);
+      res.json({ status: 200, user: user });
     })
     .catch((err) => {
       console.log('pusher.trigger error', err);

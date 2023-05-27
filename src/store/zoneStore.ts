@@ -1,6 +1,7 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import { MapStore } from './mapStore';
 import { postToUpdateChatLog } from '../service/ws';
+import { notify } from '../utils';
 
 export const ZoneMenuOption = {
   ZONE_CODE: 'ZONE_CODE',
@@ -22,6 +23,7 @@ export class ZoneStore implements Zone {
   createdBy: string;
   members: ZoneMember[] = [];
   memberMap = new Map<string, ZoneMember>();
+  latestMemberName: string | undefined;
   chatLog: ZoneChatLogEntry[] = [];
   chatLogLastEntry: ZoneChatLogEntry | undefined;
   focusedMember?: ZoneMember | null;
@@ -39,39 +41,85 @@ export class ZoneStore implements Zone {
     this.createdAt = zone.createdAt;
     this.updatedAt = zone.updatedAt;
     this.createdBy = zone.createdBy;
-    this.members = zone.members;
+    // this.members = zone.members;
     this.chatLog = zone.chatLog || [];
 
-    this.members.forEach((member) => {
-      this.memberMap.set(member.userId, member);
+    this.initMembers(zone.members);
 
-      const marker = new google.maps.Marker({
-        position: member.location,
-        map: map.map,
-        title: member.username,
-      });
+    // this.members.forEach(this.showOnMap);
+    //   (member) => {
+    //   this.memberMap.set(member.userId, member);
 
-      member.marker = marker;
-      const infoWindow = new google.maps.InfoWindow({
-        content: `<b>${member.username}</b><br>${member.message || ''}`,
-      });
+    //   const marker = new google.maps.Marker({
+    //     position: member.location,
+    //     map: map.map,
+    //     title: member.username,
+    //   });
 
-      infoWindow.open(map.map, marker);
-      member.infoWindow = infoWindow;
+    //   member.marker = marker;
+    //   const infoWindow = new google.maps.InfoWindow({
+    //     content: `<b>${member.username}</b><br>${member.message || ''}`,
+    //   });
 
-      member.hasInfoWindowOpen = true;
-      marker.addListener('click', () => {
-        if (member.hasInfoWindowOpen) {
-          infoWindow.close();
-          return (member.hasInfoWindowOpen = false);
-        }
-        infoWindow.open(map.map, marker);
-        member.hasInfoWindowOpen = true;
-      });
-    });
+    //   infoWindow.open(map.map, marker);
+    //   member.infoWindow = infoWindow;
+
+    //   member.hasInfoWindowOpen = true;
+    //   marker.addListener('click', () => {
+    //     if (member.hasInfoWindowOpen) {
+    //       infoWindow.close();
+    //       return (member.hasInfoWindowOpen = false);
+    //     }
+    //     infoWindow.open(map.map, marker);
+    //     member.hasInfoWindowOpen = true;
+    //   });
+    // }
+    // );
 
     this.map.displayMemberLocations();
   }
+
+  initMembers(members: ZoneMember[]) {
+    for (const member of members) this.addMember(member);
+  }
+
+  get membersArray() {
+    return Array.from(this.memberMap.values());
+  }
+
+  addMember(member: ZoneMember, hasJustJoined = false) {
+    const markedMember = this.showOnMap(member);
+    this.memberMap.set(member.userId, markedMember);
+    if (hasJustJoined) this.latestMemberName = markedMember.username;
+  }
+
+  showOnMap = (member: ZoneMember) => {
+    const marker = new google.maps.Marker({
+      position: member.location,
+      map: this.map.map,
+      title: member.username,
+    });
+
+    member.marker = marker;
+    const infoWindow = new google.maps.InfoWindow({
+      content: `<b>${member.username}</b><br>${member.message || ''}`,
+    });
+
+    infoWindow.open(this.map.map, marker);
+    member.infoWindow = infoWindow;
+
+    member.hasInfoWindowOpen = true;
+    marker.addListener('click', () => {
+      if (member.hasInfoWindowOpen) {
+        infoWindow.close();
+        return (member.hasInfoWindowOpen = false);
+      }
+      infoWindow.open(this.map.map, marker);
+      member.hasInfoWindowOpen = true;
+    });
+
+    return member;
+  };
 
   get currentUser() {
     return this.map.currentUser;
@@ -96,10 +144,12 @@ export class ZoneStore implements Zone {
   }
 
   clear() {
-    this.members.forEach((member) => {
+    this.memberMap.forEach((member) => {
       member.marker?.setMap(null);
       member.infoWindow?.close();
     });
+
+    this.memberMap.clear();
   }
 
   setFocus(member: ZoneMember | null) {

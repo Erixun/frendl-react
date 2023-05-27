@@ -83,10 +83,9 @@ export class MapStore {
       this.displayMessage(entry.message, userId);
     });
 
-    //TODO: implement this
     this.zoneChannel.bind('member_added', (body: any) => {
       console.log('member_added', body);
-      // notify(state);
+      this.zone?.addMember(body.user, true);
     });
     // map.zoneChannel.bind('pusher:member_removed', (member) => {
     //   this.setState((prevState, props) => {
@@ -152,7 +151,7 @@ export class MapStore {
   }
 
   displayMessage(message: string, userId = this.currentUser.userId) {
-    const user = this.zone?.members.find((member) => member.userId === userId);
+    const user = this.zone?.memberMap.get(userId); //.find((member) => member.userId === userId);
     if (!user) return console.error('No user found for id', userId);
     const content = `<b>${user.username}</b><br>${message}`;
     const infoWindow = user.infoWindow;
