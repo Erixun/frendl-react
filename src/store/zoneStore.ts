@@ -41,40 +41,9 @@ export class ZoneStore implements Zone {
     this.createdAt = zone.createdAt;
     this.updatedAt = zone.updatedAt;
     this.createdBy = zone.createdBy;
-    // this.members = zone.members;
     this.chatLog = zone.chatLog || [];
 
     this.initMembers(zone.members);
-
-    // this.members.forEach(this.showOnMap);
-    //   (member) => {
-    //   this.memberMap.set(member.userId, member);
-
-    //   const marker = new google.maps.Marker({
-    //     position: member.location,
-    //     map: map.map,
-    //     title: member.username,
-    //   });
-
-    //   member.marker = marker;
-    //   const infoWindow = new google.maps.InfoWindow({
-    //     content: `<b>${member.username}</b><br>${member.message || ''}`,
-    //   });
-
-    //   infoWindow.open(map.map, marker);
-    //   member.infoWindow = infoWindow;
-
-    //   member.hasInfoWindowOpen = true;
-    //   marker.addListener('click', () => {
-    //     if (member.hasInfoWindowOpen) {
-    //       infoWindow.close();
-    //       return (member.hasInfoWindowOpen = false);
-    //     }
-    //     infoWindow.open(map.map, marker);
-    //     member.hasInfoWindowOpen = true;
-    //   });
-    // }
-    // );
 
     this.map.displayMemberLocations();
   }
