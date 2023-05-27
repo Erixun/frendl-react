@@ -87,7 +87,8 @@ export class MapStore {
       console.log('member_added', body);
       this.zone?.addMember(body.user, true);
     });
-    // map.zoneChannel.bind('pusher:member_removed', (member) => {
+
+    // this.zoneChannel.bind('pusher:member_removed', (member) => {
     //   this.setState((prevState, props) => {
     //     const newState = { ...prevState };
     //     // remove member location once they go offline
@@ -176,17 +177,6 @@ export class MapStore {
 
       this.watchId = navigator.geolocation.watchPosition(
         (position) => {
-          // if (this.myLocation) {
-          //   runInAction(() => {
-          //     console.log('incrementing my location');
-          //     this.myLocation = new google.maps.LatLng(
-          //       this.myLocation!.lat() + 0.10002,
-          //       this.myLocation!.lng() + 0.10002
-          //     );
-          //   });
-          //   return;
-          // }
-
           const location = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
