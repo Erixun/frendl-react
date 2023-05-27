@@ -116,7 +116,6 @@ const generateUsername = () => {
   return toTitleCase(`${adjective} ${animal}`);
 };
 
-//Regex pattern for matching each first letter in a string of words:
 const FirstLetters = /\b(\w)/g;
 
 const toTitleCase = (str: string) => {
