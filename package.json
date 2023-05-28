@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "build": "tsc && vite build",
     "api:dev": "cd src/api && npm run dev",
     "api:build": "cd src/api && npm run build",
     "api:start": "cd src/api && npm run start",
     "all:dev": "npm-run-all --parallel dev api:dev",
-    "build": "tsc && vite build",
+    "all:build": "npm-run-all --parallel build api:build",
     "preview": "vite preview"
   },
   "dependencies": {
