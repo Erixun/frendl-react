@@ -142,9 +142,10 @@ export class ZoneStore implements Zone {
     return this.map.panTo(latLng);
   }
 
-  getLocation({ username }: { username: string }) {
-    return this.members.find((member) => member.username === username)
-      ?.location;
+  getLocation({ userId }: { userId: string }) {
+    const member = this.memberMap.get(userId);
+    if (!member) return console.log('member not found');
+    return member.location;
   }
 
   getMember(username: string) {
