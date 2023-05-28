@@ -1,3 +1,4 @@
+import { runInAction } from 'mobx';
 import { useMapStore } from '../hooks/useMapStore';
 import { MapStore } from '../store/mapStore';
 import { ZoneChatLogEntry } from '../store/zoneStore';
@@ -22,7 +23,10 @@ export const postToEnterZone = async (zoneCode: string) => {
     handleResponse
   );
 
-  map.currentUser = data.user;
+  runInAction(() => {
+    map.currentUser = data.user;
+    console.log('map.currentUser', map.currentUser);
+  });
 
   const zone = await fetch(`${ZONE_API_URL}/${zoneCode}`)
     .then(handleResponse)

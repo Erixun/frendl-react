@@ -3,6 +3,8 @@ import { makeAutoObservable, runInAction, reaction } from 'mobx';
 import { Channel } from 'pusher-js';
 import { ZoneMember, ZoneStore } from './zoneStore';
 import pusherClient from '../service/pusher';
+import { CURRENT_USER_COLOR } from '../constant/colors';
+import { writeContent } from '../utils';
 
 export class MapStore {
   map: google.maps.Map | undefined;
@@ -46,7 +48,7 @@ export class MapStore {
   displayMemberLocations() {
     if (!this.map || !this.zone) return;
     const bounds = new google.maps.LatLngBounds();
-    this.zone.members.forEach((member) => {
+    this.zone.memberMap.forEach((member) => {
       if (!member.location)
         return console.log('Location undefined for', member.username);
       const location = new google.maps.LatLng(member.location);
@@ -152,15 +154,21 @@ export class MapStore {
   }
 
   displayMessage(message: string, userId = this.currentUser.userId) {
-    const user = this.zone?.memberMap.get(userId); //.find((member) => member.userId === userId);
-    if (!user) return console.error('No user found for id', userId);
-    const content = `<b>${user.username}</b><br>${message}`;
-    const infoWindow = user.infoWindow;
-    if (!infoWindow) return console.error('No infoWindow found for user', user);
+    const member = this.zone?.memberMap.get(userId); //.find((member) => member.userId === userId);
+    if (!member) return console.error('No user found for id', userId);
+    member.message = message;
+    const isCurrentUser = userId === this.currentUser.userId;
+    const content = writeContent(member, isCurrentUser);
+    // `<b style="color: ${
+    //   isCurrentUser ? CURRENT_USER_COLOR : user.userColor
+    // }">${user.username}</b><br>${message}`;
+    const infoWindow = member.infoWindow;
+    if (!infoWindow)
+      return console.error('No infoWindow found for user', member);
 
     infoWindow.setContent(content);
     infoWindow.setOptions({ maxWidth: 300 });
-    infoWindow.open(this.map, user.marker);
+    infoWindow.open(this.map, member.marker);
   }
 
   findMyLocation() {
@@ -232,7 +240,6 @@ export class MapStore {
 
   async startMap() {
     const map = await initGoogleMap();
-    console.log(map);
     this.map = map;
   }
 }

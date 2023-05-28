@@ -1,7 +1,7 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import { MapStore } from './mapStore';
 import { postToUpdateChatLog } from '../service/ws';
-import { notify } from '../utils';
+import { writeContent } from '../utils';
 
 export const ZoneMenuOption = {
   ZONE_CODE: 'ZONE_CODE',
@@ -70,8 +70,10 @@ export class ZoneStore implements Zone {
     });
 
     member.marker = marker;
+
+    const isCurrentUser = member.userId === this.currentUser?.userId;
     const infoWindow = new google.maps.InfoWindow({
-      content: `<b>${member.username}</b><br>${member.message || ''}`,
+      content: writeContent(member, isCurrentUser),
     });
 
     infoWindow.open(this.map.map, marker);
@@ -96,7 +98,6 @@ export class ZoneStore implements Zone {
 
   updateLocation(userId: string, location: ZoneLocation) {
     const validMember = this.memberMap.get(userId);
-    console.log('validMember', validMember);
     console.log(
       'attempting to update location for user',
       userId,
@@ -196,7 +197,7 @@ export interface Zone {
 }
 
 export interface ZoneChatLogEntry {
-  userId?: string;
+  userId: string;
   username: string;
   message: string;
   createdAt: Date;
@@ -205,6 +206,7 @@ export interface ZoneChatLogEntry {
 export interface ZoneMember {
   userId: string;
   username: string;
+  userColor: string;
   status?: string;
   message?: string;
   location: ZoneLocation;

@@ -49,7 +49,7 @@ const GridMapOverlay = observer(
       const message = e.target.message.value;
       console.log(message);
       map.displayMessage(message);
-      if (message) map.zone?.makeLogEntry(currentUser.username, message);
+      if (message) map.zone?.makeLogEntry(map.currentUser.username, message);
 
       setMessage('');
     };

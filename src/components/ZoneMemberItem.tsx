@@ -39,7 +39,7 @@ const ZoneMemberItem = ({
       <ListIcon
         className="person-circle"
         as={IoPersonCircle}
-        color={member.status === 'online' ? 'green.500' : 'grey'}
+        color={'green.500'}
       />
       <span className="name">{member.username}</span>
     </ListItem>

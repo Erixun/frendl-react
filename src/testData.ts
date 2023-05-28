@@ -1,14 +1,18 @@
+import { CURRENT_USER_COLOR } from './constant/colors';
 import { ZoneLocation } from './store/zoneStore';
+
+const Stockholm = {
+  lat: 59.3293,
+  lng: 18.0686,
+};
 
 const currentUser = {
   userId: '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed',
   username: 'Erik Emanuel',
+  userColor: CURRENT_USER_COLOR,
   status: 'online',
   message: '',
-  location: {
-    lat: 59.35,
-    lng: 18.04,
-  },
+  location: Stockholm,
 };
 
 const members = [
@@ -34,11 +38,6 @@ const members = [
     },
   },
 ];
-
-const Stockholm = {
-  lat: 59.3293,
-  lng: 18.0686,
-};
 
 //Write a function to return a random location within a given radius of a given location
 //https://stackoverflow.com/questions/5837572/generate-a-random-point-within-a-circle-uniformly
