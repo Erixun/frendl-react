@@ -90,17 +90,10 @@ export class MapStore {
       this.zone?.addMember(body.user, true);
     });
 
-    // this.zoneChannel.bind('pusher:member_removed', (member) => {
-    //   this.setState((prevState, props) => {
-    //     const newState = { ...prevState };
-    //     // remove member location once they go offline
-    //     delete newState.locations[`${member.id}`];
-    //     // delete member from the list of online users
-    //     delete newState.users_online[`${member.id}`];
-    //     return newState;
-    //   });
-    //   notify(state);
-    // });
+    this.zoneChannel.bind('member_deleted', (body: any) => {
+      console.log('member_deleted', body);
+      this.zone?.removeMember(body.userId);
+    });
   }
 
   clearZone() {

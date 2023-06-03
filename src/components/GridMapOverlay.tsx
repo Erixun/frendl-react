@@ -18,9 +18,8 @@ import { MapStore } from '../store/mapStore';
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { ToastContainer } from 'react-toastify';
 import { ZoneMember, ZoneMenuOption } from '../store/zoneStore';
-import { currentUser } from '../testData';
 import { runInAction } from 'mobx';
-import { postToUpdateLocation } from '../service/ws';
+import { deleteZoneMember, postToUpdateLocation } from '../service/ws';
 import { ChatLogObserver } from './ChatLog';
 import ZoneDrawer from './ZoneDrawer';
 import ZoneMemberItem from './ZoneMemberItem';
@@ -37,6 +36,7 @@ const GridMapOverlay = observer(
     const exitZone = () => {
       onOpenDrawer();
       closeZoneDrawer();
+      deleteZoneMember();
       map.clearZone();
     };
 
@@ -45,9 +45,7 @@ const GridMapOverlay = observer(
     const [message, setMessage] = useState('');
     const submitStatus = (e: any) => {
       e.preventDefault();
-      console.log('submitStatus');
       const message = e.target.message.value;
-      console.log(message);
       map.displayMessage(message);
       if (message) map.zone?.makeLogEntry(map.currentUser.username, message);
 
@@ -184,6 +182,17 @@ const GridMapOverlay = observer(
       if (latestMember) notify(`${latestMember} entered the zone`);
     };
 
+    useEffect(() => {
+      notifyMemberLeft();
+    }, [map.zone?.memberJustLeft]);
+
+    const notifyMemberLeft = async () => {
+      if (!map.zone?.memberJustLeft) return;
+
+      const formerMember = map.zone.memberJustLeft;
+      if (formerMember) notify(`${formerMember} left the zone`, 'info');
+    };
+
     return (
       <div className="grid-map-overlay">
         <ToastContainer />
@@ -215,7 +224,7 @@ const GridMapOverlay = observer(
                 />
               </PopoverTrigger>
               <Portal>
-                <PopoverContent width={'max-content'} borderWidth={0}>
+                <PopoverContent width={'max-content'} sx={{filter: "drop-shadow(0px 0px 1px)"}} borderWidth={0}>
                   <PopoverArrow />
                   <PopoverBody
                     style={{

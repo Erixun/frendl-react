@@ -24,6 +24,7 @@ export class ZoneStore implements Zone {
   members: ZoneMember[] = [];
   memberMap = new Map<string, ZoneMember>();
   latestMemberName: string | undefined;
+  memberJustLeft: string | undefined;
   chatLog: ZoneChatLogEntry[] = [];
   chatLogLastEntry: ZoneChatLogEntry | undefined;
   focusedMember?: ZoneMember | null;
@@ -54,6 +55,16 @@ export class ZoneStore implements Zone {
 
   get membersArray() {
     return Array.from(this.memberMap.values());
+  }
+
+  removeMember(userId: string) {
+    const member = this.memberMap.get(userId);
+    if (!member) return;
+
+    member.marker?.setMap(null);
+    member.infoWindow?.close();
+    this.memberMap.delete(userId);
+    this.memberJustLeft = member.username
   }
 
   addMember(member: ZoneMember, hasJustJoined = false) {
