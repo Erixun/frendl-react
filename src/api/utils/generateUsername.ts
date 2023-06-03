@@ -81,7 +81,7 @@ const adjectives = [
   'fancy',
   'glamorous',
   'handsome',
-  'long',
+  'tall',
   'magnificent',
   'old-fashioned',
   'plain',
