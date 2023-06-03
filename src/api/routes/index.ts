@@ -85,4 +85,35 @@ router.post('/add-zone-member', (req, res) => {
     });
 });
 
+router.delete('/delete-zone-member', (req, res) => {
+  const { zoneId, userId } = req.body;
+  console.log('delete-zone-member', req.body)
+  // const user = generateUser(location);
+
+  pusher
+    .trigger(`zone-channel-${zoneId}`, 'member_deleted', {
+      userId: userId,
+    })
+    .then(() => {
+      console.log('pusher.trigger success for member_deleted');
+      //Remove user from ZoneDB
+      const zone = ZoneDB.get(zoneId);
+      if (!zone) return res.json({ status: 400, message: 'Zone not found' });
+
+      const isZoneMember = zone.members.some(
+        (member) => member.userId === userId
+      );
+      if (!isZoneMember)
+        return res.json({ status: 400, message: 'User not in zone' });
+
+      zone.members = zone.members.filter((member) => member.userId !== userId);
+    
+      res.json({ status: 200, userId: userId });
+    })
+    .catch((err) => {
+      console.log('pusher.trigger error', err);
+      res.json({ status: 500 });
+    });
+});
+
 export default router;
