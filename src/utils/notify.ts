@@ -1,6 +1,6 @@
-import { toast } from 'react-toastify';
+import { TypeOptions, toast } from 'react-toastify';
 
-export const notify = (msg: string) => {
+export const notify = (msg: string, type: TypeOptions = 'success') => {
   return toast(msg, {
     position: 'bottom-right',
     autoClose: 2000,
@@ -8,7 +8,7 @@ export const notify = (msg: string) => {
     closeOnClick: true,
     pauseOnHover: true,
     draggable: true,
-    type: 'success',
+    type: type,
   });
 };
 
