@@ -57,9 +57,16 @@ export class ZoneStore implements Zone {
   }
 
   addMember(member: ZoneMember, hasJustJoined = false) {
+    member.message = this.getLastMessage(member);
     const markedMember = this.showOnMap(member);
     this.memberMap.set(member.userId, markedMember);
     if (hasJustJoined) this.latestMemberName = markedMember.username;
+  }
+
+  getLastMessage(member: ZoneMember) {
+    return this.chatLog
+      .reverse()
+      .find((entry) => entry.userId === member.userId)?.message;
   }
 
   showOnMap = (member: ZoneMember) => {
