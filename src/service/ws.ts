@@ -63,6 +63,24 @@ export const postToUpdateLocation = () => {
     });
 };
 
+export const deleteZoneMember = () => {
+  const map = useMapStore();
+  fetch(`${API_URL}/delete-zone-member`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      zoneId: map.zone?.zoneId,
+      userId: map.currentUser.userId,
+    }),
+  })
+    .then(handleResponse)
+    .catch((err) => {
+      console.log(err);
+    });
+};
+
 //TODO: implement this
 // export const postToExitZone = () => {
 //   const map = useMapStore();
