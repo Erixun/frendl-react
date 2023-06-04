@@ -3,7 +3,7 @@ import { useMapStore } from '../hooks/useMapStore';
 import { MapStore } from '../store/mapStore';
 import { ZoneChatLogEntry } from '../store/zoneStore';
 
-const API_URL = import.meta.env.API_URL || 'http://localhost:3000/api';
+const API_URL = import.meta.env.VITE_API_URL// || 'http://localhost:3000/api';
 const ZONE_API_URL = `${API_URL}/zone`;
 
 export const postToEnterZone = async (zoneCode: string) => {

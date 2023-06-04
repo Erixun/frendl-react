@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "set NODE_ENV=production && tsc && vite build",
+    "api:install": "cd src/api && npm install",
     "api:dev": "cd src/api && npm run dev",
     "api:build": "cd src/api && npm run build",
     "api:start": "cd src/api && npm run start",

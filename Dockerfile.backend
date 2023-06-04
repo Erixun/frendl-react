@@ -1,0 +1,35 @@
+# Base image
+FROM node:18 AS api-server
+
+# Set working directory
+WORKDIR /app
+
+# Copy package.json and package-lock.json (if exists)
+COPY src/api/package*.json ./
+COPY tsconfig*.json ./
+
+# Set environment variables
+ENV PORT=3000
+
+# Install dependencies
+RUN npm install
+
+# Copy the rest of the application code
+COPY src/api/ ./src
+
+# Expose the port on which the app will run
+EXPOSE 3000
+
+ENV NODE_ENV=production
+ENV PUSHER_APP_ID=1585307
+ENV PUSHER_APP_KEY=1810da9709de2631e7bc
+ENV PUSHER_APP_SECRET=6394a385e8b77df410f1
+ENV PUSHER_APP_CLUSTER=eu
+# Build the Node Express server
+RUN npm run build
+
+COPY ./src/api/.env ./src/dist/api/.env
+
+# Command to start the Node Express server
+# CMD ["npm", "run", "api:start"]
+CMD ["node", "src/dist/api/server.js"]
