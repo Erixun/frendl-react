@@ -1,7 +1,34 @@
 import { Router } from 'express';
 import { isValidZoneId } from '../middleware/isValidZoneId';
+import {
+  generateUserColor,
+  generateUserId,
+  generateUsername,
+} from '../utils/generateUsername';
+import ZoneDB from '../ZoneDB';
 
 const zoneRouter = Router();
+
+export interface ZoneDto {
+  message: string;
+  zoneId: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  members: Member[];
+}
+
+export interface Member {
+  userId: string;
+  username: string;
+  status: string;
+  location: Location;
+}
+
+export interface Location {
+  lat: number;
+  lng: number;
+}
 
 //Create a new zone
 zoneRouter.post('/', (req, res) => {
@@ -20,12 +47,16 @@ zoneRouter.post('/', (req, res) => {
 
   const members = [
     {
+      userId: req.body.userId || '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed',
       username: createdBy,
+      userColor: generateUserColor(0),
       status: 'online',
       location: req.body.location,
     },
     {
-      username: 'Melvin Moore',
+      userId: generateUserId(), //'1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bef',
+      username: generateUsername(),
+      userColor: generateUserColor(1),
       status: 'offline',
       location: {
         latitude: 59.36,
@@ -33,7 +64,9 @@ zoneRouter.post('/', (req, res) => {
       },
     },
     {
-      username: 'Malva Melin',
+      userId: generateUserId(), //'1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bee',
+      username: generateUsername(),
+      userColor: generateUserColor(2),
       status: 'offline',
       location: {
         latitude: 59.365,
@@ -50,14 +83,19 @@ zoneRouter.post('/', (req, res) => {
     updatedAt,
     createdBy,
     members,
+    chatLog: [],
   };
+
+  ZoneDB.set(zoneId, responseObject);
+
   res.send(responseObject);
 });
 
 //Retrieve zone by id
 zoneRouter.get('/:id', isValidZoneId, (req, res) => {
   const zoneId = req.params.id;
-  //TODO: retrieve zone from database
+  //TODO: retrieve zone from REAL database
+  const zone = ZoneDB.get(zoneId);
   //The zone should contain the following properties:
   //zoneId, createdAt, updatedAt, createdBy, members, invitees
   //as well as positions of all members, status of all members, chat history, etc.
@@ -65,10 +103,13 @@ zoneRouter.get('/:id', isValidZoneId, (req, res) => {
   //
   //if zone does not exist, send 404
 
-  res.send(`Zone ID ${zoneId} is valid! But does it exist...?`);
+  if (zone) return res.send(zone);
+
+  res.status(404).send(`Zone ID ${zoneId} is valid! But does it exist...?`);
 });
 
 //Invite user(s) to zone
+//TODO: determine if necessary
 zoneRouter.post('/:id/invite', isValidZoneId, (req, res) => {
   console.log('req.body', req.body);
   const invitees = req.body.invitees;

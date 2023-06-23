@@ -1,7 +1,10 @@
 import { Loader } from '@googlemaps/js-api-loader';
-import { makeAutoObservable, runInAction } from 'mobx';
+import { makeAutoObservable, runInAction, reaction } from 'mobx';
 import { Channel } from 'pusher-js';
 import { ZoneMember, ZoneStore } from './zoneStore';
+import pusherClient from '../service/pusher';
+import { CURRENT_USER_COLOR } from '../constant/colors';
+import { writeContent } from '../utils';
 
 export class MapStore {
   map: google.maps.Map | undefined;
@@ -14,6 +17,7 @@ export class MapStore {
   currentUserStatus = '';
   zone: ZoneStore | undefined;
   zoneId: string | undefined;
+  prevZoneId: string | undefined;
   zoneChannel: Channel | undefined;
   watchId: number | undefined;
   markers: google.maps.Marker[] = [];
@@ -22,6 +26,14 @@ export class MapStore {
     this.currentUser = currentUser;
     makeAutoObservable(this);
     this.startMap();
+    reaction(
+      () => this.zoneId,
+      (zoneId) => {
+        if (!zoneId) return;
+        // this.clearZone();
+        this.initZone();
+      }
+    );
   }
 
   get userLocation() {
@@ -36,7 +48,7 @@ export class MapStore {
   displayMemberLocations() {
     if (!this.map || !this.zone) return;
     const bounds = new google.maps.LatLngBounds();
-    this.zone.members.forEach((member) => {
+    this.zone.memberMap.forEach((member) => {
       if (!member.location)
         return console.log('Location undefined for', member.username);
       const location = new google.maps.LatLng(member.location);
@@ -44,6 +56,44 @@ export class MapStore {
     });
     this.map.fitBounds(bounds);
     this.map.panTo(bounds.getCenter());
+  }
+
+  initZone() {
+    this.displayMemberLocations();
+    pusherClient.unsubscribe(`zone-channel-${this.prevZoneId}`);
+
+    this.zoneChannel = pusherClient.subscribe(`zone-channel-${this.zoneId}`);
+
+    this.zoneChannel.bind('pusher:subscription_succeeded', () => {
+      console.log('pusher:subscription_succeeded');
+      runInAction(() => {
+        this.prevZoneId = this.zoneId;
+      });
+    });
+
+    this.zoneChannel.bind('location-update', (body: any) => {
+      const { userId, location } = body;
+
+      this.zone?.updateLocation(userId, location);
+    });
+
+    this.zoneChannel.bind('chat-log-update', (body: any) => {
+      const { userId, entry } = body;
+
+      console.log('chat-log-update entry', entry);
+      this.zone?.appendChatLog(entry);
+      this.displayMessage(entry.message, userId);
+    });
+
+    this.zoneChannel.bind('member_added', (body: any) => {
+      console.log('member_added', body);
+      this.zone?.addMember(body.user, true);
+    });
+
+    this.zoneChannel.bind('member_deleted', (body: any) => {
+      console.log('member_deleted', body);
+      this.zone?.removeMember(body.userId);
+    });
   }
 
   clearZone() {
@@ -66,6 +116,7 @@ export class MapStore {
     this.markers.forEach((marker) => {
       const infoWindow = new google.maps.InfoWindow({
         content: `<b>${marker.getTitle()}</b>` || 'Unknown',
+        maxWidth: 300,
       });
 
       const window = { isOpen: false };
@@ -95,19 +146,22 @@ export class MapStore {
     });
   }
 
-  displayStatus(status: string) {
-    if (!status) {
-      this.currentUserStatus = '';
-      console.error('No status provided');
-    }
-    this.currentUserStatus = `<p>${status}</p>`;
-    const my = this.zone?.members.find(
-      (member) => member.username === this.currentUser.username
-    );
-    if (!my) return console.error('No member found for current user');
+  displayMessage(message: string, userId = this.currentUser.userId) {
+    const member = this.zone?.memberMap.get(userId); //.find((member) => member.userId === userId);
+    if (!member) return console.error('No user found for id', userId);
+    member.message = message;
+    const isCurrentUser = userId === this.currentUser.userId;
+    const content = writeContent(member, isCurrentUser);
+    // `<b style="color: ${
+    //   isCurrentUser ? CURRENT_USER_COLOR : user.userColor
+    // }">${user.username}</b><br>${message}`;
+    const infoWindow = member.infoWindow;
+    if (!infoWindow)
+      return console.error('No infoWindow found for user', member);
 
-    const content = `<b>${my.username}</b><br>${status}`;
-    my.infoWindow?.setContent(content);
+    infoWindow.setContent(content);
+    infoWindow.setOptions({ maxWidth: 300 });
+    infoWindow.open(this.map, member.marker);
   }
 
   findMyLocation() {
@@ -128,12 +182,15 @@ export class MapStore {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
           };
+
           const newLocation = new google.maps.LatLng(
             location.lat,
             location.lng
           );
+          // TODO: uncomment this to prevent unnecessary updates:
           if (!hasMoved(this.myLocation, newLocation)) {
             console.log('No need to update location as it has not changed');
+
             cancelLoading(this);
             return;
           }
@@ -141,8 +198,6 @@ export class MapStore {
           runInAction(() => {
             this.myLocation = newLocation;
           });
-
-          //TODO: trigger pusher event to update location
         },
         (error) => {
           console.error(error.message);
@@ -178,7 +233,6 @@ export class MapStore {
 
   async startMap() {
     const map = await initGoogleMap();
-    console.log(map);
     this.map = map;
   }
 }
