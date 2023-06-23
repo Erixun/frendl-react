@@ -28,16 +28,16 @@ zoneRouter.post('/', (req, res) => {
       username: 'Melvin Moore',
       status: 'offline',
       location: {
-        lat: 59.36,
-        lng: 18.05,
+        latitude: 59.36,
+        longitude: 18.05,
       },
     },
     {
       username: 'Malva Melin',
       status: 'offline',
       location: {
-        lat: 59.365,
-        lng: 18.1,
+        latitude: 59.365,
+        longitude: 18.1,
       },
     },
   ];
