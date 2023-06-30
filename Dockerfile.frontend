@@ -7,31 +7,23 @@ WORKDIR /app
 # Copy package.json and package-lock.json
 COPY package*.json ./
 
+
+# Install dependencies
+RUN npm install
+
 ENV NODE_ENV=production
 ENV API_URL=https://frendl-api.azurewebsites.net/api
 
-# Install dependencies
-RUN npm ci
+# Install typescript globally
+RUN npm install -g typescript
 
 # Copy the Vite configuration file
-COPY vite.config.js .
+COPY vite.config.ts .
 
 # Copy the source code
 COPY . .
 
 # Build the app with environment variables
-ARG NODE_ENV
-ARG VITE_ENV_FILE
-ENV NODE_ENV=${NODE_ENV}
-ENV VITE_ENV_FILE=${VITE_ENV_FILE}
-RUN npm run build
-# Install dependencies
-RUN npm install
-
-# Copy the rest of the application code
-COPY . .
-
-# Build the React app
 RUN npm run build
 
 # Production stage
