@@ -1,7 +1,7 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import { MapStore } from './mapStore';
 import { postToUpdateChatLog } from '../service/ws';
-import { writeContent } from '../utils';
+import { toLatLng, writeContent } from '../utils';
 
 export const ZoneMenuOption = {
   ZONE_CODE: 'ZONE_CODE',
@@ -64,7 +64,7 @@ export class ZoneStore implements Zone {
     member.marker?.setMap(null);
     member.infoWindow?.close();
     this.memberMap.delete(userId);
-    this.memberJustLeft = member.username
+    this.memberJustLeft = member.username;
   }
 
   addMember(member: ZoneMember, hasJustJoined = false) {
@@ -82,7 +82,7 @@ export class ZoneStore implements Zone {
 
   showOnMap = (member: ZoneMember) => {
     const marker = new google.maps.Marker({
-      position: member.location,
+      position: toLatLng(member.location),
       map: this.map.map,
       title: member.username,
     });
@@ -114,16 +114,17 @@ export class ZoneStore implements Zone {
     return this.map.currentUser;
   }
 
-  updateLocation(userId: string, location: ZoneLocation) {
+  updateLocation(userId: string, zoneLocation: ZoneLocation) {
     const validMember = this.memberMap.get(userId);
     console.log(
       'attempting to update location for user',
       userId,
       'to',
-      location
+      zoneLocation
     );
     if (validMember) {
-      validMember.location = location;
+      const location = toLatLng(zoneLocation);
+      validMember.location = zoneLocation;
       validMember.marker?.setPosition(location);
       validMember.infoWindow?.setPosition(location);
 
@@ -157,7 +158,9 @@ export class ZoneStore implements Zone {
     const location = this.getLocation(member);
     if (!location) return console.log('location not found');
 
-    const latLng = new google.maps.LatLng(location);
+    //FIXME: location has the wrong type
+    const latLngLocation = toLatLng(location);
+    const latLng = new google.maps.LatLng(latLngLocation);
     return this.map.panTo(latLng);
   }
 
@@ -234,6 +237,6 @@ export interface ZoneMember {
 }
 
 export interface ZoneLocation {
-  lat: number;
-  lng: number;
+  latitude: number;
+  longitude: number;
 }

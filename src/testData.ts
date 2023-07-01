@@ -43,8 +43,8 @@ const members = [
 //https://stackoverflow.com/questions/5837572/generate-a-random-point-within-a-circle-uniformly
 //https://stackoverflow.com/questions/1253499/simple-calculations-for-working-with-lat-lon-and-km-distance
 const getRandomLocation = (center: ZoneLocation, radius: number) => {
-  const y0 = center.lat;
-  const x0 = center.lng;
+  const y0 = center.latitude;
+  const x0 = center.longitude;
   const rd = radius / 111300; //about 111300 meters in one degree
 
   const u = Math.random();

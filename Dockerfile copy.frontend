@@ -1,0 +1,47 @@
+# Build stage
+FROM node:18 AS build-stage
+
+# Set the working directory
+WORKDIR /app
+
+# Copy package.json and package-lock.json
+COPY package*.json ./
+
+ENV NODE_ENV=production
+ENV API_URL=https://frendl-api.azurewebsites.net/api
+
+# Install dependencies
+RUN npm install
+
+# Copy the Vite configuration file
+COPY vite.config.ts .
+
+# Copy the source code
+COPY . .
+
+# Build the app with environment variables
+ARG NODE_ENV
+ARG VITE_ENV_FILE
+ENV NODE_ENV=${NODE_ENV}
+ENV VITE_ENV_FILE=${VITE_ENV_FILE}
+RUN npm run build
+# Install dependencies
+RUN npm install
+
+# Copy the rest of the application code
+COPY . .
+
+# Build the React app
+RUN npm run build
+
+# Production stage
+FROM nginx:latest AS production-stage
+
+# Copy the built artifacts from the build stage
+COPY --from=build-stage /app/dist /usr/share/nginx/html
+
+# Expose port 80
+EXPOSE 80
+
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]

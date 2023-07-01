@@ -109,48 +109,6 @@ const adjectives = [
   'zealous',
 ];
 
-//list 30 different css color hex codes that fulfills the following criteria:
-// 2. The color must not be a shade of gray
-// 3. The color must not be a shade of white
-// 4. The color must not be a shade of black
-// 5. The color must fulfill the WCAG contrast ratio of 4.5:1 on a light background
-// 6. The color must not be too bright
-//list a rainbow of dark colors
-const colorHexCodes1 = [
-  '#D22C2C',
-  '#CC0066',
-  '#b36c24',
-  '#875202',
-  '#b39003',
-  '#5c7a03',
-  '#009933',
-  '#006600',
-  '#018041',
-  '#028766',
-  '#009999',
-  '#006666',
-  '#0099CC',
-  '#003366',
-  '#660099',
-  '#663399',
-  '#5e027c',
-  '#7c035e',
-  '#844284',
-  '#996699',
-  '#663333',
-  '#663300',
-  '#996633',
-  '#9c7e60',
-  '#c1734b',
-  '#b54a03',
-  '#c02903',
-  '#823434',
-  '#bb693f',
-  '#00008B',
-  '#000080',
-  '#000000',
-];
-
 // generate a palette of 40 light colors that fulfills the following criteria:
 // 1. It must fulfill the WCAG contrast ratio of 4.5:1 as background to black text.
 const colorHexCodes = [

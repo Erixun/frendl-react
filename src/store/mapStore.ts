@@ -4,7 +4,7 @@ import { Channel } from 'pusher-js';
 import { ZoneMember, ZoneStore } from './zoneStore';
 import pusherClient from '../service/pusher';
 import { CURRENT_USER_COLOR } from '../constant/colors';
-import { writeContent } from '../utils';
+import { toLatLng, writeContent } from '../utils';
 
 export class MapStore {
   map: google.maps.Map | undefined;
@@ -51,7 +51,9 @@ export class MapStore {
     this.zone.memberMap.forEach((member) => {
       if (!member.location)
         return console.log('Location undefined for', member.username);
-      const location = new google.maps.LatLng(member.location);
+
+      const latLngLocation = toLatLng(member.location);
+      const location = new google.maps.LatLng(latLngLocation);
       bounds.extend(location);
     });
     this.map.fitBounds(bounds);
